@@ -407,31 +407,234 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); fon
 
 /* Responsive */
 @media (max-width:900px) {
-  .panel-grid { grid-template-columns:1fr 1fr; }
-  #card-records { grid-column:1; grid-row:3; }
+  .panel-grid { 
+    grid-template-columns:1fr; 
+    gap:10px;
+  }
+  #card-mode, #card-routes, #card-launch, #card-skin, #card-records { 
+    grid-column:1; 
+    grid-row:auto; 
+  }
   .profile-layout { grid-template-columns:1fr; }
+  
+  .menu-header {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .logo {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .logo-img {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .logo-title {
+    font-size: 1.5rem;
+  }
+  
+  .logo-sub {
+    font-size: 0.75rem;
+  }
+  
+  .main-nav {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .nav-btn {
+    flex: 1;
+    max-width: 150px;
+  }
 }
+
 @media (max-width:600px) {
-  .panel-grid { grid-template-columns:1fr; }
-  #card-routes, #card-launch, #card-skin, #card-records { grid-column:1; grid-row:auto; }
-  .menu-wrapper { padding:16px; }
-  .logo-title { font-size:1.5rem; }
+  .menu-wrapper { 
+    padding:10px; 
+    gap:0px;
+  }
+  
+  .menu-header {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .logo {
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+  
+  .logo-img {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .logo-title { 
+    font-size:1.2rem; 
+  }
+  
+  .logo-sub {
+    font-size: 0.65rem;
+  }
+  
+  .main-nav {
+    gap: 6px;
+  }
+  
+  .nav-btn {
+    padding: 8px 16px;
+    font-size: 0.8rem;
+  }
+  
+  .card {
+    padding: 14px;
+    gap: 10px;
+  }
+  
+  .card-title {
+    font-size: 0.65rem;
+  }
+  
+  /* Mode selector - more compact */
+  .mode-tabs {
+    gap: 6px;
+  }
+  
+  .mode-btn {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  
+  .mode-icon {
+    font-size: 1.2rem;
+  }
+  
+  .mode-label {
+    font-size: 0.85rem;
+  }
+  
+  .mode-desc {
+    font-size: 0.65rem;
+  }
+  
+  /* Route list - scrollable */
+  .route-list {
+    max-height: 200px;
+  }
+  
+  .route-card {
+    padding: 8px 10px;
+    gap: 10px;
+  }
+  
+  .route-card-grade {
+    width: 35px;
+    height: 35px;
+    font-size: 0.75rem;
+  }
+  
+  .route-card-name {
+    font-size: 0.8rem;
+  }
+  
+  .route-card-desc {
+    font-size: 0.65rem;
+  }
+  
+  /* Launch card - compact */
+  .route-preview {
+    gap: 10px;
+  }
+  
+  .route-grade-big {
+    font-size: 2rem;
+  }
+  
+  .route-name-big {
+    font-size: 0.9rem;
+  }
+  
+  .route-desc-txt {
+    font-size: 0.7rem;
+  }
+  
+  .btn-launch {
+    padding: 12px 20px;
+    font-size: 0.9rem;
+  }
+  
+  /* Skin selector - 3 columns on mobile */
+  .skin-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  
+  .skin-btn {
+    padding: 6px 3px;
+  }
+  
+  .skin-color {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .skin-name {
+    font-size: 0.55rem;
+  }
+  
+  /* Records - compact */
+  .record-row {
+    padding: 4px 0;
+  }
+  
+  .record-label {
+    font-size: 0.7rem;
+  }
+  
+  .record-val {
+    font-size: 0.75rem;
+  }
+  
+  /* Profile stats - 2 columns */
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  
+  .stat-block {
+    padding: 10px 8px;
+  }
+  
+  .stat-val {
+    font-size: 1.1rem;
+  }
+  
+  .stat-lbl {
+    font-size: 0.6rem;
+  }
 }
 
 /* ══════════ MOBILE CONTROLS ══════════ */
 #mobile-controls {
   position: absolute;
-  bottom: 80px;
-  right: 16px;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
   display: none;
-  flex-direction: column;
-  gap: 12px;
+  flex-direction: row;
+  gap: 10px;
   pointer-events: auto;
+  z-index: 20;
 }
 
 .mobile-btn {
-  width: 70px;
-  height: 70px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: var(--glass);
   border: 2px solid var(--glass-border);
@@ -440,7 +643,7 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); fon
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   cursor: pointer;
   transition: all 0.2s;
   color: var(--text);
@@ -455,12 +658,12 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); fon
 }
 
 .mobile-btn .btn-icon {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   line-height: 1;
 }
 
 .mobile-btn .btn-label {
-  font-size: 0.65rem;
+  font-size: 0.55rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -470,12 +673,12 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); fon
   position: absolute;
   top: -4px;
   right: -4px;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: var(--accent);
   color: white;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -501,18 +704,48 @@ html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); fon
   }
   
   #instructions {
-    bottom: 16px;
-    right: auto;
-    left: 16px;
-    max-width: 250px;
+    display: none;
   }
   
+  /* Hide fatigue panel completely on mobile */
   #hud-left {
-    width: 180px;
+    display: none;
   }
   
-  .stat-row label {
+  /* Compact top bar with essential info only */
+  #hud-top {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    transform: none;
+  }
+  
+  .route-info {
+    padding: 6px 12px;
+    gap: 6px;
+    justify-content: space-between;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  
+  .route-name {
+    font-size: 0.7rem;
+    flex: 1 1 auto;
+    min-width: 100px;
+  }
+  
+  .route-grade {
+    font-size: 0.85rem;
+  }
+  
+  .route-height {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  
+  .checkpoint-badge {
     font-size: 0.6rem;
-    width: 70px;
+    padding: 2px 6px;
   }
 }

@@ -29,24 +29,38 @@ export const GRADES = {
 
 // ── Curated named routes ─────────────────────────────────────
 export const CURATED_ROUTES = [
-  // BLOC
-  { mode:'BLOC', id:'b1', name:"La Dalle Douce",        difficulty:1, grade:'4',  desc:"Première ascension, prises généreuses." },
-  { mode:'BLOC', id:'b2', name:"Le Dièdre du Débutant", difficulty:2, grade:'5c', desc:"Quelques réglettes, début de la technique." },
-  { mode:'BLOC', id:'b3', name:"La Fissure Traîtresse",  difficulty:3, grade:'6a', desc:"Les premières pincettes apparaissent." },
-  { mode:'BLOC', id:'b4', name:"Le Toit du Diable",      difficulty:4, grade:'6c', desc:"Un dévers prononcé, physique exigeant." },
-  { mode:'BLOC', id:'b5', name:"L'Araignée Noire",       difficulty:5, grade:'7a', desc:"Mouvements dynamiques, prises microscopiques." },
-  { mode:'BLOC', id:'b6', name:"Le Cobra",               difficulty:6, grade:'7c', desc:"Coordination parfaite requise." },
-  { mode:'BLOC', id:'b7', name:"Silence (8c)",           difficulty:8, grade:'8c', desc:"Le Graal. Bon courage." },
-  // VOIE
-  { mode:'VOIE', id:'v1', name:"Initiation Falaise",     difficulty:1, grade:'4',  desc:"Voie tracée pour les premières fois." },
-  { mode:'VOIE', id:'v2', name:"La Couenne Calcaire",    difficulty:2, grade:'5c', desc:"Calcaire typique, bonne adhérence." },
-  { mode:'VOIE', id:'v3', name:"Dévers Méditerranéen",   difficulty:3, grade:'6a', desc:"Style sportif, bien équipée." },
-  { mode:'VOIE', id:'v4', name:"La Grande Voie",         difficulty:4, grade:'6c', desc:"15 mètres de plaisir intense." },
-  { mode:'VOIE', id:'v5', name:"Rêve de Singe",          difficulty:6, grade:'7a', desc:"Sequence de doigts sur faible relief." },
-  { mode:'VOIE', id:'v6', name:"Biographie",             difficulty:9, grade:'9a', desc:"La voie la plus dure du monde. Pour les légendes." },
+  // BLOC PRÉDÉFINI
+  { mode:'BLOC', id:'bloc-1', name:"La Dalle Douce",        difficulty:1, grade:'4',  desc:"Première ascension, prises généreuses.", predefined: true },
+  { mode:'BLOC', id:'bloc-2', name:"Le Dièdre du Débutant", difficulty:2, grade:'5c', desc:"Quelques réglettes, début de la technique.", predefined: true },
+  { mode:'BLOC', id:'bloc-3', name:"La Fissure Traîtresse",  difficulty:3, grade:'6a', desc:"Les premières pincettes apparaissent.", predefined: true },
+  { mode:'BLOC', id:'b4', name:"Le Toit du Diable",      difficulty:4, grade:'6c', desc:"Un dévers prononcé, physique exigeant.", predefined: true },
+  { mode:'BLOC', id:'b5', name:"L'Araignée Noire",       difficulty:5, grade:'7a', desc:"Mouvements dynamiques, prises microscopiques.", predefined: true },
+  { mode:'BLOC', id:'b6', name:"Le Cobra",               difficulty:6, grade:'7c', desc:"Coordination parfaite requise.", predefined: true },
+  { mode:'BLOC', id:'b7', name:"Silence (8c)",           difficulty:8, grade:'8c', desc:"Le Graal. Bon courage.", predefined: true },
+  
+  // BLOC ALÉATOIRE
+  { mode:'BLOC', id:'br1', name:"🎲 Bloc Aléatoire Facile",    difficulty:1, grade:'4',  desc:"Nouveau bloc à chaque fois.", predefined: false },
+  { mode:'BLOC', id:'br2', name:"🎲 Bloc Aléatoire Moyen",     difficulty:3, grade:'6a', desc:"Nouveau bloc à chaque fois.", predefined: false },
+  { mode:'BLOC', id:'br3', name:"🎲 Bloc Aléatoire Difficile", difficulty:5, grade:'7a', desc:"Nouveau bloc à chaque fois.", predefined: false },
+  { mode:'BLOC', id:'br4', name:"🎲 Bloc Aléatoire Extrême",   difficulty:7, grade:'8a', desc:"Nouveau bloc à chaque fois.", predefined: false },
+  
+  // VOIE PRÉDÉFINIE
+  { mode:'VOIE', id:'voie-1', name:"Initiation Falaise",     difficulty:1, grade:'4',  desc:"Voie tracée pour les premières fois.", predefined: true },
+  { mode:'VOIE', id:'voie-2', name:"La Couenne Calcaire",    difficulty:2, grade:'5c', desc:"Calcaire typique, bonne adhérence.", predefined: true },
+  { mode:'VOIE', id:'v3', name:"Dévers Méditerranéen",   difficulty:3, grade:'6a', desc:"Style sportif, bien équipée.", predefined: true },
+  { mode:'VOIE', id:'v4', name:"La Grande Voie",         difficulty:4, grade:'6c', desc:"15 mètres de plaisir intense.", predefined: true },
+  { mode:'VOIE', id:'v5', name:"Rêve de Singe",          difficulty:6, grade:'7a', desc:"Sequence de doigts sur faible relief.", predefined: true },
+  { mode:'VOIE', id:'v6', name:"Biographie",             difficulty:9, grade:'9a', desc:"La voie la plus dure du monde. Pour les légendes.", predefined: true },
+  
+  // VOIE ALÉATOIRE
+  { mode:'VOIE', id:'vr1', name:"🎲 Voie Aléatoire Facile",    difficulty:1, grade:'4',  desc:"Nouvelle voie à chaque fois.", predefined: false },
+  { mode:'VOIE', id:'vr2', name:"🎲 Voie Aléatoire Moyenne",   difficulty:3, grade:'6a', desc:"Nouvelle voie à chaque fois.", predefined: false },
+  { mode:'VOIE', id:'vr3', name:"🎲 Voie Aléatoire Difficile", difficulty:5, grade:'7a', desc:"Nouvelle voie à chaque fois.", predefined: false },
+  { mode:'VOIE', id:'vr4', name:"🎲 Voie Aléatoire Extrême",   difficulty:7, grade:'8a', desc:"Nouvelle voie à chaque fois.", predefined: false },
+  
   // INFINI
-  { mode:'INFINI', id:'i1', name:"Mur Sans Fin",         difficulty:2, grade:'5c+', desc:"Grimpe sans limite. Des checkpoints tous les 20m." },
-  { mode:'INFINI', id:'i2', name:"L'Infini Expert",      difficulty:5, grade:'7a',  desc:"Le mur sans fin en mode extrême." },
+  { mode:'INFINI', id:'i1', name:"Mur Sans Fin",         difficulty:2, grade:'5c+', desc:"Grimpe sans limite. Des checkpoints tous les 20m.", predefined: false },
+  { mode:'INFINI', id:'i2', name:"L'Infini Expert",      difficulty:5, grade:'7a',  desc:"Le mur sans fin en mode extrême.", predefined: false },
 ];
 
 // ── Limbs ────────────────────────────────────────────────────
@@ -87,13 +101,55 @@ export class RouteGenerator {
     this._nextId = 1;
     this.mode = 'VOIE';
     this.topY = 0;
+    this.seed = 0;
+    this.rng = Math.random; // Default to Math.random
+  }
+  
+  // Seeded random number generator for reproducible routes
+  _seededRandom() {
+    this.seed = (this.seed * 9301 + 49297) % 233280;
+    return this.seed / 233280;
+  }
+  
+  // Load a predefined level with exact hold positions
+  loadPredefinedLevel(level) {
+    this.holds = [];
+    this._nextId = 1;
+    this.mode = level.mode;
+    this.isInfinite = false;
+    
+    // Load all holds from the predefined level
+    level.holds.forEach(hold => {
+      this._add(
+        hold.x, 
+        hold.y, 
+        hold.z, 
+        hold.type, 
+        HOLD_TYPES[hold.type].label, 
+        hold.isStart || false, 
+        hold.isTop || false, 
+        hold.isCheckpoint || false
+      );
+    });
+    
+    // Set topY to the highest hold
+    const topHold = level.holds.find(h => h.isTop);
+    this.topY = topHold ? topHold.y : level.holds[level.holds.length - 1].y;
   }
 
-  reset(mode, difficulty, isInfinite = false) {
+  reset(mode, difficulty, isInfinite = false, useSeed = true) {
     this.holds = [];
     this._nextId = 1;
     this.mode = mode;
     this.isInfinite = isInfinite;
+    
+    // Use seed for predefined routes, random for random mode
+    if (useSeed) {
+      this.seed = mode.charCodeAt(0) * 1000 + difficulty * 100;
+      this.rng = () => this._seededRandom();
+    } else {
+      this.rng = Math.random;
+    }
 
     // Four guaranteed starting holds
     this._add(-0.22, 0.50, 0.02, 'BAC', 'Départ G', true, false);  // id 1 → leftFoot
@@ -137,20 +193,20 @@ export class RouteGenerator {
     let pathX = 0; // The central line of the route
 
     for (let i = 0; i < count; i++) {
-      const y = yFrom + i * stepY + (Math.random() - 0.5) * stepY * 0.5;
+      const y = yFrom + i * stepY + (this.rng() - 0.5) * stepY * 0.5;
       
-      // Make the route wander left and right, specially pronounced for BLOC
-      pathX += (Math.random() - 0.5) * (mode === 'BLOC' ? 1.0 : 0.3);
-      pathX = Math.max(-3.0, Math.min(3.0, pathX)); // clamp lateral drift
+      // Make the route wander left and right, reduced range for mobile visibility
+      pathX += (this.rng() - 0.5) * (mode === 'BLOC' ? 0.6 : 0.2);
+      pathX = Math.max(-1.5, Math.min(1.5, pathX)); // Reduced from ±3.0 to ±1.5
       
-      const x = pathX + (Math.random() - 0.5) * 1.2;
+      const x = pathX + (this.rng() - 0.5) * 0.8; // Reduced from 1.2 to 0.8
       
-      let type = pool[Math.floor(Math.random() * pool.length)];
+      let type = pool[Math.floor(this.rng() * pool.length)];
 
-      // Sprinkle volumes on the sides of the path
+      // Sprinkle volumes on the sides of the path, closer to center
       if (type === 'VOLUME') {
-        const side = Math.random() < 0.5 ? -0.85 : 0.85;
-        this._add(side * (0.7 + Math.random() * 0.4), y, 0.01, 'VOLUME', 'Volume');
+        const side = this.rng() < 0.5 ? -0.6 : 0.6; // Reduced from ±0.85
+        this._add(side * (0.6 + this.rng() * 0.3), y, 0.01, 'VOLUME', 'Volume'); // Reduced spread
         continue;
       }
 

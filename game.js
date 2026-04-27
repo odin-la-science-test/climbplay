@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { LIMBS, LIMB_LABELS, HOLD_TYPES, ARM_REACH, LEG_REACH, RouteGenerator, SKINS, GRADES, CURATED_ROUTES } from './data.js';
 import { buildScene, createHoldMesh } from './scene.js';
 import { Climber } from './climber.js';
+import { getLevel } from './levels.js';
 
 // ============================================================
 // PROFILE — Save/Load stats and skins with daily progression
@@ -153,7 +154,7 @@ export class Game {
     this.holdMeshes = [];
     
     // Setup background scene for menu
-    this.routeGen.reset('VOIE', 1);
+    this.routeGen.reset('VOIE', 1, false, true);
     this._syncHolds();
     this._syncPositionsFromHolds();
     this.climber.updatePose(
@@ -384,7 +385,17 @@ export class Game {
     this.climber.group.position.set(0, 0, 0);
     this.climber.group.rotation.set(0, 0, 0);
 
-    this.routeGen.reset(mode, difficulty, isInfinite);
+    // Check if this route has a predefined level
+    const predefinedLevel = this.selectedRoute?.id ? getLevel(this.selectedRoute.id) : null;
+    
+    if (predefinedLevel) {
+      // Load predefined level with exact hold positions
+      this.routeGen.loadPredefinedLevel(predefinedLevel);
+    } else {
+      // Generate procedural route
+      this.routeGen.reset(mode, difficulty, isInfinite, this.selectedRoute?.predefined !== false);
+    }
+    
     this._syncHolds();
 
     this.limbHolds = { leftHand: 3, rightHand: 4, leftFoot: 1, rightFoot: 2 };
@@ -801,6 +812,11 @@ export class Game {
       const el = document.getElementById('gauge-' + id);
       const text = document.getElementById('val-' + id);
       if(!el || !text) return;
+      
+      // Set CSS variable for circular gauge on mobile
+      el.parentElement.style.setProperty('--gauge-value', Math.min(100, val));
+      
+      // Keep bar gauge for desktop
       el.style.width = Math.min(100, val) + '%';
       text.textContent = intVal + '%';
       el.style.background = val > 80 ? '#ef4444' : (val > 50 ? '#f59e0b' : '#3b82f6');
