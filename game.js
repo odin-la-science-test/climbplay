@@ -370,6 +370,14 @@ export class Game {
     this.stress = 0;
     this.activeLimb = null;
     
+    // Rest system: 3 uses per game, or unlimited in infinite mode (recharges every 5m)
+    this.restUsesRemaining = 3;
+    this.lastRestHeight = 0; // Track height for infinite mode recharge
+    
+    // Update mobile button counter
+    const restCount = document.getElementById('rest-count');
+    if (restCount) restCount.textContent = this.restUsesRemaining;
+    
     // Record this session
     this.profile.recordSession();
 
@@ -584,14 +592,66 @@ export class Game {
     window.addEventListener('keydown', e => {
       if (this.state !== 'PLAYING') return;
       if (e.code === 'KeyR') {
-        this.stamina = Math.min(100, this.stamina + 20);
-        this.log("Repos (Stamina +20)");
+        this._performRest();
       } else if (e.code === 'Space') {
-        this.fatigue.leftArm = Math.max(0, this.fatigue.leftArm - 15);
-        this.fatigue.rightArm = Math.max(0, this.fatigue.rightArm - 15);
-        this.log("Secouage des bras !");
+        this._performShake();
+      } else if (e.code === 'Escape') {
+        this.showMenu();
       }
     });
+    
+    // Mobile button bindings
+    const btnRest = document.getElementById('btn-rest');
+    const btnShake = document.getElementById('btn-shake');
+    const btnMenu = document.getElementById('btn-menu');
+    
+    if (btnRest) {
+      btnRest.addEventListener('click', () => {
+        if (this.state === 'PLAYING') this._performRest();
+      });
+    }
+    
+    if (btnShake) {
+      btnShake.addEventListener('click', () => {
+        if (this.state === 'PLAYING') this._performShake();
+      });
+    }
+    
+    if (btnMenu) {
+      btnMenu.addEventListener('click', () => {
+        if (this.state === 'PLAYING') this.showMenu();
+      });
+    }
+  }
+  
+  _performRest() {
+    const currentHeight = Math.max(0, this.climber.parts.torso.position.y);
+    
+    if (this.isInfinite) {
+      // Infinite mode: recharge every 5m
+      if (currentHeight - this.lastRestHeight >= 5.0) {
+        this.restUsesRemaining = 3;
+        this.lastRestHeight = currentHeight;
+      }
+    }
+    
+    if (this.restUsesRemaining > 0) {
+      this.stamina = Math.min(this.maxStamina || 100, this.stamina + 20);
+      this.restUsesRemaining--;
+      this.log(`Repos (Stamina +20) - ${this.restUsesRemaining} repos restants`);
+      
+      // Update mobile button counter
+      const restCount = document.getElementById('rest-count');
+      if (restCount) restCount.textContent = this.restUsesRemaining;
+    } else {
+      this.log("Plus de repos disponibles !", 'warn');
+    }
+  }
+  
+  _performShake() {
+    this.fatigue.leftArm = Math.max(0, this.fatigue.leftArm - 15);
+    this.fatigue.rightArm = Math.max(0, this.fatigue.rightArm - 15);
+    this.log("Secouage des bras !");
   }
 
   _getHoldPos(id) {

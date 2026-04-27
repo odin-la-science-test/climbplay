@@ -239,7 +239,25 @@
 
     <!-- Instructions -->
     <div id="instructions" class="panel glass">
-      <p><strong>Glisser-déposer</strong> un membre · <kbd>R</kbd> Repos · <kbd>Espace</kbd> Secouer · <kbd>Échap</kbd> Menu</p>
+      <p class="desktop-only"><strong>Glisser-déposer</strong> un membre · <kbd>R</kbd> Repos · <kbd>Espace</kbd> Secouer · <kbd>Échap</kbd> Menu</p>
+      <p class="mobile-only"><strong>Glisser-déposer</strong> un membre pour grimper</p>
+    </div>
+    
+    <!-- Mobile Controls -->
+    <div id="mobile-controls">
+      <button id="btn-rest" class="mobile-btn">
+        <span class="btn-icon">💤</span>
+        <span class="btn-label">Repos</span>
+        <span class="btn-count" id="rest-count">3</span>
+      </button>
+      <button id="btn-shake" class="mobile-btn">
+        <span class="btn-icon">🤝</span>
+        <span class="btn-label">Secouer</span>
+      </button>
+      <button id="btn-menu" class="mobile-btn">
+        <span class="btn-icon">☰</span>
+        <span class="btn-label">Menu</span>
+      </button>
     </div>
   </div>
 
