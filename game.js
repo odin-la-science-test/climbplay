@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { LIMBS, LIMB_LABELS, HOLD_TYPES, ARM_REACH, LEG_REACH, RouteGenerator, SKINS, GRADES, CURATED_ROUTES } from './data.js';
+import { LIMBS, LIMB_LABELS, HOLD_TYPES, ARM_REACH, LEG_REACH, RouteGenerator, SKINS, GRADES, CURATED_ROUTES, ENV_CONDITIONS } from './data.js';
 import { buildScene, createHoldMesh } from './scene.js';
 import { Climber } from './climber.js';
 import { getLevel } from './levels.js';
@@ -118,7 +118,6 @@ export class Game {
       leftHand: new THREE.Vector3(), rightHand: new THREE.Vector3(),
       leftFoot: new THREE.Vector3(), rightFoot: new THREE.Vector3() 
     };
-    this.fatigue = { leftArm: 0, rightArm: 0 };
     this.stamina = 100;
     this.stress = 0;
     this.activeLimb = null;
@@ -126,19 +125,40 @@ export class Game {
     this.checkpointsHitThisRun = 0;
     this.dragPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -0.25);
     
+    // Environmental conditions
+    this.currentCondition = 'NONE';
+    this.conditionIntensity = 1.0;
+
+    // Swinging & Jumping state
+    this.bodyOffset = new THREE.Vector3(0, 0, 0);
+    this.bodyVelocity = new THREE.Vector3(0, 0, 0);
+    this.isJumping = false;
+    this.isDraggingTorso = false;
+    
     this.init();
   }
 
   init() {
     const container = document.getElementById('canvas-container');
-    container.style.touchAction = 'none'; // CRITICAL: prevents browser from stealing drag on touch devices
+    container.style.touchAction = 'none';
     const s = buildScene(container);
     Object.assign(this, s);
 
     this.climber = new Climber(this.profile.settings.skinId);
     this.scene.add(this.climber.group);
     
-    // Hitboxes for limb interaction (invisible)
+    // Wait for climber model to load
+    this.climber.onLoadCallback = () => {
+      this._finishInit();
+    };
+    
+    if (this.climber.isLoaded) {
+      this._finishInit();
+    }
+  }
+  
+  _finishInit() {
+    // Hitboxes for limb interaction
     this.limbHandles = {};
     LIMBS.forEach(limb => {
       const mesh = new THREE.Mesh(
@@ -153,7 +173,6 @@ export class Game {
     this.routeGen = new RouteGenerator();
     this.holdMeshes = [];
     
-    // Setup background scene for menu
     this.routeGen.reset('VOIE', 1, false, true);
     this._syncHolds();
     this._syncPositionsFromHolds();
@@ -168,7 +187,6 @@ export class Game {
     this.clock = new THREE.Clock();
     this.renderer.setAnimationLoop(() => this._animate());
     
-    // Remove loading screen
     const loader = document.getElementById('loading-screen');
     if (loader) loader.style.display = 'none';
     
@@ -186,14 +204,44 @@ export class Game {
   }
 
   _setupUI() {
+    // ── Theme Toggle
+    this._initTheme();
+    
+    console.log('[DEBUG] Setting up theme buttons...');
+    
+    // Theme selector buttons in profile
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      console.log('[DEBUG] Found theme button:', btn.dataset.theme);
+      btn.onclick = () => {
+        const theme = btn.dataset.theme;
+        console.log('[DEBUG] Theme button clicked:', theme);
+        this._setTheme(theme);
+      };
+    });
+    
     // ── Nav tabs
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.onclick = () => {
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.nav-panel').forEach(p => p.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById(`panel-${btn.dataset.nav}`).classList.add('active');
-        if (btn.dataset.nav === 'profile') this._renderProfilePanel();
+        const targetId = btn.dataset.target;
+        if (!targetId) return;
+        
+        // Hide all views and backgrounds
+        document.querySelectorAll('.scroll-view').forEach(p => p.style.display = 'none');
+        document.querySelectorAll('.fullscreen-bg').forEach(b => b.style.display = 'none');
+        
+        // Show selected view and background
+        document.getElementById(targetId).style.display = 'flex';
+        const bgId = targetId === 'view-profile' ? 'bg-profile' : 'bg-home';
+        const bgEl = document.getElementById(bgId);
+        if (bgEl) bgEl.style.display = 'block';
+        
+        // Update active class on all nav buttons matching this target
+        document.querySelectorAll('.nav-btn').forEach(b => {
+          if (b.dataset.target === targetId) b.classList.add('active');
+          else b.classList.remove('active');
+        });
+        
+        if (targetId === 'view-profile') this._renderProfilePanel();
       };
     });
 
@@ -245,7 +293,34 @@ export class Game {
     // ── Launch
     document.getElementById('btn-start-game').onclick = () => {
       if (!this.selectedRoute) return;
-      this.start(this.selectedRoute.mode, this.selectedRoute.difficulty, this.selectedRoute.mode === 'INFINI');
+      
+      // Show Map Loading Screen
+      const mapLoader = document.getElementById('map-loading-screen');
+      const mapFill = document.querySelector('.map-loader-fill');
+      
+      // Hide home view and background
+      document.getElementById('view-home').style.display = 'none';
+      document.getElementById('bg-home').style.display = 'none';
+      
+      if (mapLoader && mapFill) {
+        mapLoader.style.display = 'flex';
+        mapFill.style.transition = 'none';
+        mapFill.style.width = '0%';
+        
+        // Simulate loading time
+        setTimeout(() => { mapFill.style.transition = 'width 1.5s ease-out'; mapFill.style.width = '100%'; }, 50);
+        
+        setTimeout(() => {
+          mapLoader.style.opacity = '0';
+          setTimeout(() => {
+            mapLoader.style.display = 'none';
+            mapLoader.style.opacity = '1';
+            this.start(this.selectedRoute.mode, this.selectedRoute.difficulty, this.selectedRoute.mode === 'INFINI');
+          }, 500);
+        }, 1500);
+      } else {
+        this.start(this.selectedRoute.mode, this.selectedRoute.difficulty, this.selectedRoute.mode === 'INFINI');
+      }
     };
 
     // ── Profile save
@@ -285,6 +360,47 @@ export class Game {
         document.getElementById('btn-start-game').disabled = false;
       };
       list.appendChild(card);
+    });
+  }
+  
+  // ── Theme Management
+  _initTheme() {
+    // Load saved theme or default to dark
+    const savedTheme = localStorage.getItem('chalk_it_theme') || 'dark';
+    console.log('[DEBUG] Initializing theme:', savedTheme);
+    this._setTheme(savedTheme);
+  }
+  
+  _setTheme(theme) {
+    console.log('[DEBUG] Setting theme to:', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('chalk_it_theme', theme);
+    
+    console.log('[DEBUG] Current data-theme attribute:', document.documentElement.getAttribute('data-theme'));
+    
+    // Update active state on theme buttons
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      if (btn.dataset.theme === theme) {
+        btn.classList.add('active');
+        console.log('[DEBUG] Activated button:', theme);
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
+  
+  _toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    this._setTheme(newTheme);
+  }
+  
+  _updateThemeIcon(theme) {
+    const icons = document.querySelectorAll('#theme-toggle, #theme-toggle-profile');
+    icons.forEach(icon => {
+      if (icon) {
+        icon.textContent = theme === 'dark' ? '🌙' : '☀️';
+      }
     });
   }
 
@@ -343,9 +459,25 @@ export class Game {
 
   showMenu() {
     this.state = 'MENU';
-    document.getElementById('main-menu').style.display = 'flex';
+    // Hide game HUD and Overlays
     document.getElementById('hud').style.display = 'none';
     document.getElementById('basecamp-overlay').style.display = 'none';
+    
+    // Show Home View and Background
+    document.querySelectorAll('.scroll-view').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.fullscreen-bg').forEach(b => b.style.display = 'none');
+    
+    const viewHome = document.getElementById('view-home');
+    const bgHome = document.getElementById('bg-home');
+    if (viewHome) viewHome.style.display = 'flex';
+    if (bgHome) bgHome.style.display = 'block';
+    
+    // Update active nav button
+    document.querySelectorAll('.nav-btn').forEach(b => {
+      if (b.dataset.target === 'view-home') b.classList.add('active');
+      else b.classList.remove('active');
+    });
+
     const vEl = document.getElementById('local-record-voie');
     const bEl = document.getElementById('local-record-bloc');
     const xEl = document.getElementById('profile-xp');
@@ -361,7 +493,7 @@ export class Game {
     this.state = 'PLAYING';
     this.checkpointsHitThisRun = 0;
 
-    this.fatigue = { leftArm: 0, rightArm: 0 };
+    this.stamina = 100;
     
     // Apply endurance bonus from daily training
     const staminaMultiplier = this.profile.getStaminaMultiplier();
@@ -370,6 +502,9 @@ export class Game {
     
     this.stress = 0;
     this.activeLimb = null;
+    this.isJumping = false;
+    this.bodyOffset.set(0, 0, 0);
+    this.bodyVelocity.set(0, 0, 0);
     
     // Rest system: 3 uses per game, or unlimited in infinite mode (recharges every 5m)
     this.restUsesRemaining = 3;
@@ -381,6 +516,17 @@ export class Game {
     
     // Record this session
     this.profile.recordSession();
+    
+    // Select environmental condition based on difficulty
+    const conditionChance = Math.min(0.7, difficulty * 0.1); // 10% per difficulty level, max 70%
+    if (Math.random() < conditionChance && (mode === 'VOIE' || mode === 'INFINI')) {
+      const conditions = ['WIND', 'RAIN', 'HEAT', 'FOG'];
+      this.currentCondition = conditions[Math.floor(Math.random() * conditions.length)];
+      const cond = ENV_CONDITIONS[this.currentCondition];
+      this.log(`${cond.icon} Condition: ${cond.label}`, 'warn');
+    } else {
+      this.currentCondition = 'NONE';
+    }
 
     this.climber.group.position.set(0, 0, 0);
     this.climber.group.rotation.set(0, 0, 0);
@@ -392,7 +538,7 @@ export class Game {
       // Load predefined level with exact hold positions
       this.routeGen.loadPredefinedLevel(predefinedLevel);
     } else {
-      // Generate procedural route
+      // Generate route
       this.routeGen.reset(mode, difficulty, isInfinite, this.selectedRoute?.predefined !== false);
     }
     
@@ -423,8 +569,12 @@ export class Game {
     if (hudName) hudName.textContent = routeName;
     if (hudGrade) hudGrade.textContent = routeGrade;
 
-    document.getElementById('main-menu').style.display = 'none';
-    document.getElementById('basecamp-overlay').style.display = 'none';
+    // Hide any menus left over
+    document.querySelectorAll('.scroll-view').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.fullscreen-bg').forEach(b => b.style.display = 'none');
+    const basecamp = document.getElementById('basecamp-overlay');
+    if (basecamp) basecamp.style.display = 'none';
+    
     document.getElementById('hud').style.display = 'block';
     const badge = document.getElementById('checkpoint-badge');
     if (badge) badge.style.display = 'none';
@@ -437,7 +587,14 @@ export class Game {
     this.state = 'FALLEN';
     this.activeLimb = null;
 
-    const height = Math.max(0, this.climber.parts.torso.position.y);
+    // Get height from torso or glbModel
+    let height = 0;
+    if (this.climber.glbModel) {
+      height = Math.max(0, this.climber.glbModel.position.y);
+    } else if (this.climber.parts && this.climber.parts.torso) {
+      height = Math.max(0, this.climber.parts.torso.position.y);
+    }
+    
     const xpGain = Math.floor(height * 10 * this.difficulty + (this.checkpointsHitThisRun || 0) * 50);
     this.profile.xp += xpGain;
     this.profile.checkpointsHit = (this.profile.checkpointsHit || 0) + (this.checkpointsHitThisRun || 0);
@@ -474,90 +631,139 @@ export class Game {
     // Grab Limb
     window.addEventListener('pointerdown', e => {
       if (this.state !== 'PLAYING') return;
-      const hit = getHit(e, Object.values(this.limbHandles));
+      
+      const objectsToCheck = [...Object.values(this.limbHandles)];
+      if (this.climber.parts.torso) objectsToCheck.push(this.climber.parts.torso);
+      
+      const hit = getHit(e, objectsToCheck);
       if (hit) {
-        this.activeLimb = hit.object.userData.limb;
+        if (hit.object.userData.limb) {
+          this.activeLimb = hit.object.userData.limb;
+          this.isDraggingTorso = false;
+        } else {
+          this.isDraggingTorso = true;
+          this.activeLimb = null;
+        }
+        
         document.querySelectorAll('.limb-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector(`[data-limb="${this.activeLimb}"]`)?.classList.add('active');
+        if (this.activeLimb) document.querySelector(`[data-limb="${this.activeLimb}"]`)?.classList.add('active');
         document.body.style.cursor = 'grabbing';
       }
     });
 
-    // Drag Limb
+    // Drag Limb or Torso
     window.addEventListener('pointermove', e => {
       if (this.state !== 'PLAYING') return;
       mouse.x = (e.clientX / innerWidth) * 2 - 1;
       mouse.y = -(e.clientY / innerHeight) * 2 + 1;
       rc.setFromCamera(mouse, this.camera);
       
-      if (!this.activeLimb) {
-        const hoverHit = rc.intersectObjects(Object.values(this.limbHandles), true)[0];
+      if (!this.activeLimb && !this.isDraggingTorso) {
+        const objectsToHover = [...Object.values(this.limbHandles)];
+        if (this.climber.parts.torso) objectsToHover.push(this.climber.parts.torso);
+        const hoverHit = rc.intersectObjects(objectsToHover, true)[0];
         document.body.style.cursor = hoverHit ? 'grab' : 'default';
         return;
       }
       
       const hit = rc.ray.intersectPlane(this.dragPlane, new THREE.Vector3());
       if (hit) {
-        this.limbPositions[this.activeLimb].copy(hit);
-        
-        // Try direct raycasting on hold meshes first
-        const directHit = rc.intersectObjects(this.holdMeshes, true)[0];
-        
-        if (directHit && directHit.object.userData.holdId) {
-          // Direct hit on a hold mesh - use this!
-          const hitHold = this.holdMeshes.find(m => m.userData.holdId === directHit.object.userData.holdId);
-          if (this.hoveredHold !== hitHold) {
-            if (this.hoveredHold) this.hoveredHold.material.emissive.setHex(0x000000);
-            if (hitHold) hitHold.material.emissive.setHex(0x333333);
-            this.hoveredHold = hitHold;
-          }
-        } else {
-          // No direct hit - fall back to proximity detection
-          let nearest = null;
-          let minDist = Infinity;
+        if (this.activeLimb) {
+          this.limbPositions[this.activeLimb].copy(hit);
           
-          this.routeGen.holds.forEach(h => {
-             const dx = h.x - hit.x;
-             const dy = h.y - hit.y;
-             
-             let d, threshold;
-             if (h.type === 'VOLUME') {
-               d = Math.sqrt(dx*dx + dy*dy);
-               threshold = 0.50;
-             } else {
-               const dz = (h.z + 0.01) - hit.z;
-               d = Math.sqrt(dx*dx + dy*dy + dz*dz);
-               threshold = 0.35;
-             }
-             
-             if (d < threshold && d < minDist) { 
-               minDist = d; 
-               nearest = h; 
-             }
-          });
-
-          const hitHold = nearest ? this.holdMeshes.find(m => m.userData.holdId === nearest.id) : null;
-          if (this.hoveredHold !== hitHold) {
-            if (this.hoveredHold) this.hoveredHold.material.emissive.setHex(0x000000);
-            if (hitHold) hitHold.material.emissive.setHex(0x333333);
-            this.hoveredHold = hitHold;
+          let currentHitHold = null;
+          const directHit = rc.intersectObjects(this.holdMeshes, true)[0];
+          
+          if (directHit && directHit.object.userData.holdId) {
+            currentHitHold = this.holdMeshes.find(m => m.userData.holdId === directHit.object.userData.holdId);
+          } else {
+            let nearest = null;
+            let minDist = Infinity;
+            this.routeGen.holds.forEach(h => {
+               if (h.type === 'RELAIS') return;
+               const dx = h.x - hit.x;
+               const dy = h.y - hit.y;
+               let d, threshold;
+               if (h.type === 'VOLUME') { d = Math.sqrt(dx*dx + dy*dy); threshold = 0.35; }
+               else { const dz = (h.z + 0.01) - hit.z; d = Math.sqrt(dx*dx + dy*dy + dz*dz); threshold = 0.25; }
+               if (d < threshold && d < minDist) { minDist = d; nearest = h; }
+            });
+            if (nearest) currentHitHold = this.holdMeshes.find(m => m.userData.holdId === nearest.id);
           }
+          
+          if (this.hoveredHold !== currentHitHold) {
+            if (this.hoveredHold) this.hoveredHold.material.emissive.setHex(0x000000);
+            if (currentHitHold && currentHitHold.userData.holdType !== 'RELAIS') currentHitHold.material.emissive.setHex(0x333333);
+            this.hoveredHold = currentHitHold;
+          }
+        } else if (this.isDraggingTorso) {
+          const mfX = (this.limbPositions.leftHand.x + this.limbPositions.rightHand.x + this.limbPositions.leftFoot.x + this.limbPositions.rightFoot.x) / 4;
+          const mfY = (this.limbPositions.leftHand.y + this.limbPositions.rightHand.y + this.limbPositions.leftFoot.y + this.limbPositions.rightFoot.y) / 4;
+          
+          const targetOffset = hit.clone().sub(new THREE.Vector3(mfX, mfY + 0.10, 0.20));
+          targetOffset.x = Math.max(-0.6, Math.min(0.6, targetOffset.x));
+          targetOffset.y = Math.max(-0.4, Math.min(0.4, targetOffset.y));
+          
+          this.bodyVelocity.x = (targetOffset.x - this.bodyOffset.x) * 10;
+          this.bodyVelocity.y = (targetOffset.y - this.bodyOffset.y) * 10;
+          this.bodyOffset.copy(targetOffset);
         }
       }
     });
 
-    // Release Limb (Drop on Hold)
+    // Release Limb or Torso
     window.addEventListener('pointerup', e => {
-      if (this.state !== 'PLAYING' || !this.activeLimb) return;
+      if (this.state !== 'PLAYING') return;
       document.body.style.cursor = 'default';
+
+      if (this.isDraggingTorso) {
+        this.isDraggingTorso = false;
+        return;
+      }
+
+      if (!this.activeLimb) return;
+      
+      console.log('[DEBUG] pointerup - activeLimb:', this.activeLimb, 'hoveredHold:', this.hoveredHold);
       
       if (this.hoveredHold) {
         const hData = this.hoveredHold.userData;
-        if (this._checkKinematics(this.activeLimb, this.hoveredHold.position)) {
+        
+        console.log('[DEBUG] holdId:', hData.holdId, 'holdType:', hData.holdType);
+        
+        // CHECK: Prevent putting all 4 limbs on the same hold (unrealistic)
+        // Count limbs already on this hold (excluding the one we're moving)
+        const limbsOnThisHold = LIMBS.filter(l => l !== this.activeLimb && this.limbHolds[l] === hData.holdId).length;
+        
+        console.log('[DEBUG] limbsOnThisHold:', limbsOnThisHold, 'limbHolds:', this.limbHolds);
+        
+        // Allow max 3 limbs on one hold (so if 3 are already there, can't add a 4th)
+        if (limbsOnThisHold >= 3) {
+          this.log(`❌ Maximum 3 membres par prise !`, 'warn');
+          if (this.hoveredHold) this.hoveredHold.material.emissive.setHex(0x000000);
+          this.hoveredHold = null;
+          this.activeLimb = null;
+          this._syncPositionsFromHolds();
+          return;
+        }
+        
+        console.log('[DEBUG] Checking kinematics...');
+        const kinematicsOk = this._checkKinematics(this.activeLimb, this.hoveredHold.position);
+        console.log('[DEBUG] Kinematics result:', kinematicsOk);
+        
+        if (kinematicsOk) {
           this.limbHolds[this.activeLimb] = hData.holdId;
           this.log(`${LIMB_LABELS[this.activeLimb]} → ${HOLD_TYPES[hData.holdType].label}`);
           
           const routeHold = this.routeGen.holds.find(h => h.id === hData.holdId);
+          
+          // Handle crumbling holds
+          if (routeHold && routeHold.type === 'CRUMBLING' && routeHold.durability > 0) {
+            routeHold.durability--;
+            if (routeHold.durability === 0) {
+              this.log(`💥 Prise friable détruite !`, 'warn');
+            }
+          }
+          
           if (routeHold && routeHold.isTop) {
             const oppArm = this.activeLimb === 'leftHand' ? 'rightHand' : 'leftHand';
             if (this.limbHolds[oppArm] === hData.holdId) {
@@ -605,7 +811,7 @@ export class Game {
       if (e.code === 'KeyR') {
         this._performRest();
       } else if (e.code === 'Space') {
-        this._performShake();
+        this._performJump();
       } else if (e.code === 'Escape') {
         this.showMenu();
       }
@@ -613,18 +819,11 @@ export class Game {
     
     // Mobile button bindings
     const btnRest = document.getElementById('btn-rest');
-    const btnShake = document.getElementById('btn-shake');
     const btnMenu = document.getElementById('btn-menu');
     
     if (btnRest) {
       btnRest.addEventListener('click', () => {
         if (this.state === 'PLAYING') this._performRest();
-      });
-    }
-    
-    if (btnShake) {
-      btnShake.addEventListener('click', () => {
-        if (this.state === 'PLAYING') this._performShake();
       });
     }
     
@@ -636,7 +835,13 @@ export class Game {
   }
   
   _performRest() {
-    const currentHeight = Math.max(0, this.climber.parts.torso.position.y);
+    // Get current height from torso or glbModel
+    let currentHeight = 0;
+    if (this.climber.glbModel) {
+      currentHeight = Math.max(0, this.climber.glbModel.position.y);
+    } else if (this.climber.parts && this.climber.parts.torso) {
+      currentHeight = Math.max(0, this.climber.parts.torso.position.y);
+    }
     
     if (this.isInfinite) {
       // Infinite mode: recharge every 5m
@@ -658,11 +863,19 @@ export class Game {
       this.log("Plus de repos disponibles !", 'warn');
     }
   }
-  
-  _performShake() {
-    this.fatigue.leftArm = Math.max(0, this.fatigue.leftArm - 15);
-    this.fatigue.rightArm = Math.max(0, this.fatigue.rightArm - 15);
-    this.log("Secouage des bras !");
+
+  _performJump() {
+    if (this.isJumping || this.state !== 'PLAYING') return;
+    
+    // Jump strength: base + momentum
+    this.isJumping = true;
+    this.bodyVelocity.y += 4.5; // Upward boost
+    this.bodyVelocity.x *= 1.5; // Momentum boost
+    
+    // Detach hands for the jump
+    this.limbHolds.leftHand = null;
+    this.limbHolds.rightHand = null;
+    this.log("🚀 DYNO !");
   }
 
   _getHoldPos(id) {
@@ -685,6 +898,8 @@ export class Game {
     LIMBS.forEach(l => {
       if (this.activeLimb !== l) {
         if (this.limbHolds[l] === null) {
+          // If jumping, don't snap to resting position (limbs are moving with physics)
+          if (this.isJumping) return;
           // Released limb - put it in resting position EXTENDED behind the body
           if (!this.limbPositions[l]) this.limbPositions[l] = new THREE.Vector3();
           
@@ -724,27 +939,54 @@ export class Game {
   // Prevents impossible moves
   _checkKinematics(limb, newPos) {
     const isArm = limb.includes('Hand');
-    const maxReach = isArm ? ARM_REACH * 1.1 : LEG_REACH * 1.1;
+    // Reach tolerance (arms can stretch more than legs)
+    const maxReach = isArm ? ARM_REACH * 1.3 : LEG_REACH * 1.15;
     
-    // 1. Distance from opposite limb
+    // 1. Distance from opposite limb (allow reasonable stance)
     const opp = isArm ? (limb === 'leftHand' ? 'rightHand' : 'leftHand') : (limb === 'leftFoot' ? 'rightFoot' : 'leftFoot');
     if (this.limbHolds[opp] !== null) {
       const oppPos = this._getHoldPos(this.limbHolds[opp]);
-      if (newPos.distanceTo(oppPos) > maxReach * 2.2) return false;
+      // Arms can span wider (2.5x), feet less (2.0x) - more realistic
+      const maxSpan = isArm ? maxReach * 2.5 : maxReach * 2.0;
+      if (newPos.distanceTo(oppPos) > maxSpan) return false;
     }
 
-    // 2. Arms can't go too far above feet
+    // 2. Arms can't go too far above feet (allow extension)
     if (isArm && this.limbHolds.leftFoot !== null && this.limbHolds.rightFoot !== null) {
       const hipY = (this._getHoldPos(this.limbHolds.leftFoot).y + this._getHoldPos(this.limbHolds.rightFoot).y) / 2 + LEG_REACH * 0.8;
-      if (newPos.y > hipY + maxReach * 1.6) return false;
+      if (newPos.y > hipY + maxReach * 2.0) return false;
     }
 
-    // 3. Feet shouldn't go absurdly higher than hands
+    // 3. FEET VALIDATION — more restrictive for realism
     if (!isArm) {
       let maxHandY = -Infinity;
       if (this.limbHolds.leftHand !== null) maxHandY = Math.max(maxHandY, this._getHoldPos(this.limbHolds.leftHand).y);
       if (this.limbHolds.rightHand !== null) maxHandY = Math.max(maxHandY, this._getHoldPos(this.limbHolds.rightHand).y);
-      if (maxHandY !== -Infinity && newPos.y > maxHandY + 0.4) return false;
+      
+      // REALISTIC: Feet can only reach ~0.8m above hands
+      // This prevents unrealistic high steps while allowing normal climbing
+      if (maxHandY !== -Infinity && newPos.y > maxHandY + 0.8) return false;
+      
+      // Additional check: Both feet must stay relatively close together
+      // This prevents the "splits" position
+      const otherFoot = limb === 'leftFoot' ? 'rightFoot' : 'leftFoot';
+      if (this.limbHolds[otherFoot] !== null) {
+        const otherFootPos = this._getHoldPos(this.limbHolds[otherFoot]);
+        const feetDistance = newPos.distanceTo(otherFootPos);
+        // Feet can't be more than ~1.2m apart (realistic hip width limit)
+        if (feetDistance > 1.2) return false;
+      }
+      
+      // Feet need support - they can't reach holds too far away
+      // Unlike hands which can stretch, feet need to push with control
+      if (this.limbHolds.leftHand !== null || this.limbHolds.rightHand !== null) {
+        const handX = this.limbHolds.leftHand !== null ? 
+          this._getHoldPos(this.limbHolds.leftHand).x : 
+          this._getHoldPos(this.limbHolds.rightHand).x;
+        const footX = newPos.x;
+        // Feet shouldn't be too far horizontally from hands (realistic body positioning)
+        if (Math.abs(footX - handX) > 0.6) return false;
+      }
     }
     
     return true;
@@ -753,18 +995,62 @@ export class Game {
   _updateFatigue(dt) {
     if (this.state !== 'PLAYING') return;
 
-    let totalLoad = 0;
+    let staminaDrain = 0;
+    let fatigueMultiplier = 1.0;
+    
+    // Apply environmental condition multiplier
+    if (this.currentCondition !== 'NONE') {
+      const condition = ENV_CONDITIONS[this.currentCondition];
+      if (condition) {
+        fatigueMultiplier *= condition.fatigueMult;
+      }
+    }
+    
+    // Count active limbs
+    const activeHands = (this.limbHolds.leftHand !== null ? 1 : 0) + (this.limbHolds.rightHand !== null ? 1 : 0);
+    const activeFeet = (this.limbHolds.leftFoot !== null ? 1 : 0) + (this.limbHolds.rightFoot !== null ? 1 : 0);
+    const totalActiveLimbs = activeHands + activeFeet;
+    
+    // Base stamina drain based on number of limbs used
+    if (totalActiveLimbs === 4) {
+      staminaDrain = 0.5; // Stable position, minimal drain
+    } else if (totalActiveLimbs === 3) {
+      staminaDrain = 1.5; // One limb free, moderate drain
+    } else if (totalActiveLimbs === 2) {
+      staminaDrain = 3.5; // Two limbs, high drain
+    } else if (totalActiveLimbs === 1) {
+      staminaDrain = 6.0; // One limb only, extreme drain
+    } else {
+      staminaDrain = 10.0; // No limbs, falling!
+    }
+    
+    // Extra drain if hanging by hands only (no feet)
+    if (activeHands > 0 && activeFeet === 0) {
+      staminaDrain *= 2.0; // Double drain when hanging
+    }
+    
+    // Extra drain if only one hand
+    if (activeHands === 1 && activeFeet === 0) {
+      staminaDrain *= 1.5; // 1.5x more if one hand only
+    }
+    
+    // Calculate hold difficulty
+    let holdDifficultyMultiplier = 1.0;
     LIMBS.forEach(l => {
-      if (this.activeLimb === l || this.limbHolds[l] === null) {
-        totalLoad += 2.5; // Hanging limb costs a lot of energy
-      } else {
+      if (this.limbHolds[l] !== null) {
         const hold = this.routeGen.holds.find(h => h.id === this.limbHolds[l]);
-        if (hold) totalLoad += HOLD_TYPES[hold.type].fatigue;
+        if (hold) {
+          let holdFatigue = HOLD_TYPES[hold.type].fatigue;
+          
+          // Apply special hold modifiers
+          if (hold.type === 'SLIPPERY') {
+            holdFatigue *= 1.5;
+          }
+          
+          holdDifficultyMultiplier += holdFatigue * 0.1; // Each hold adds to difficulty
+        }
       }
     });
-
-    const activeArms = (this.limbHolds.leftHand !== null ? 1 : 0) + (this.limbHolds.rightHand !== null ? 1 : 0);
-    const armLoad = totalLoad * (activeArms === 1 ? 0.8 : 0.4); // Double load if hanging by one hand
     
     // Check if feet are hooked high above hands (bat hang / high hook)
     let maxHandY = -Infinity;
@@ -773,28 +1059,82 @@ export class Game {
     
     let coreStrain = 0;
     if (maxHandY !== -Infinity) {
-      if (this.limbHolds.leftFoot !== null) coreStrain += Math.max(0, this._getHoldPos(this.limbHolds.leftFoot).y - maxHandY) * 15;
-      if (this.limbHolds.rightFoot !== null) coreStrain += Math.max(0, this._getHoldPos(this.limbHolds.rightFoot).y - maxHandY) * 15;
+      if (this.limbHolds.leftFoot !== null) coreStrain += Math.max(0, this._getHoldPos(this.limbHolds.leftFoot).y - maxHandY) * 2.0;
+      if (this.limbHolds.rightFoot !== null) coreStrain += Math.max(0, this._getHoldPos(this.limbHolds.rightFoot).y - maxHandY) * 2.0;
     }
     
-    const finalArmLoad = armLoad + coreStrain;
+    // Final stamina calculation
+    const finalDrain = (staminaDrain * holdDifficultyMultiplier + coreStrain) * fatigueMultiplier * dt;
+    this.stamina -= finalDrain;
     
-    // Base multiplier reduced from 3.0 to 1.5 to make game last longer than 20 seconds
-    if (this.activeLimb !== 'leftHand' && this.limbHolds.leftHand !== null)  this.fatigue.leftArm  += finalArmLoad * dt * 1.5;
-    if (this.activeLimb !== 'rightHand' && this.limbHolds.rightHand !== null) this.fatigue.rightArm += finalArmLoad * dt * 1.5;
+    // Stress is just a visual indicator of stamina level
+    this.stress = Math.max(0, 100 - this.stamina);
 
-    this.stamina -= (totalLoad + coreStrain) * dt * 0.15;
-    this.stress = Math.min(100, Math.max(this.fatigue.leftArm, this.fatigue.rightArm));
-
-    if (this.fatigue.leftArm > 100 || this.fatigue.rightArm > 100 || this.stamina <= 0) {
+    if (this.stamina <= 0) {
       this.fall("Épuisement total. Vous avez lâché prise.");
+    }
+
+    // ── NEW: PHYSICS & SWINGING ─────────────────────────────────
+    if (this.state === 'PLAYING') {
+      const physicsDt = 0.016; // Fixed timestep for physics
+      
+      if (this.isJumping) {
+        // Gravity applies during jump
+        this.bodyVelocity.y -= 9.8 * physicsDt;
+        const delta = this.bodyVelocity.clone().multiplyScalar(physicsDt);
+        
+        // Move all limb positions along with the jump
+        LIMBS.forEach(l => {
+          this.limbPositions[l].add(delta);
+        });
+        
+        // Check for catch (any hand reaches a hold)
+        this.routeGen.holds.forEach(h => {
+          const hp = new THREE.Vector3(h.x, h.y, h.z);
+          LIMBS.slice(0,2).forEach(hand => {
+            if (this.limbPositions[hand].distanceTo(hp) < 0.25) {
+              this.isJumping = false;
+              this.bodyVelocity.set(0,0,0);
+              this.limbHolds[hand] = h.id;
+              this.log("Prise rattrapée ! 🚀");
+            }
+          });
+        });
+
+        // Fail if falling too low (out of screen)
+        if (this.limbPositions.leftHand.y < -3) {
+          this.fall("Saut manqué ! Vous avez chuté.");
+        }
+      } else {
+        // Swinging physics (pendulum effect if hanging)
+        const handsOn = (this.limbHolds.leftHand !== null ? 1 : 0) + (this.limbHolds.rightHand !== null ? 1 : 0);
+        if (handsOn > 0 && !this.isDraggingTorso) {
+          // Pendulum-like return to center
+          const spring = 5.0;
+          const damp = 0.95;
+          const accel = this.bodyOffset.clone().multiplyScalar(-spring);
+          this.bodyVelocity.add(accel.multiplyScalar(physicsDt));
+          this.bodyVelocity.multiplyScalar(damp);
+          this.bodyOffset.add(this.bodyVelocity.clone().multiplyScalar(physicsDt));
+        }
+      }
     }
   }
 
   _updateHUD() {
     if (this.state !== 'PLAYING') return;
     
-    const h = Math.max(0, this.climber.parts.torso.position.y);
+    // Wait for climber to be loaded
+    if (!this.climber || !this.climber.isLoaded) return;
+    
+    // Get height from torso or glbModel
+    let h = 0;
+    if (this.climber.glbModel) {
+      h = Math.max(0, this.climber.glbModel.position.y);
+    } else if (this.climber.parts && this.climber.parts.torso) {
+      h = Math.max(0, this.climber.parts.torso.position.y);
+    }
+    
     const hStr = h.toFixed(1) + 'm';
     if (this._lastH !== hStr) {
       const el = document.getElementById('current-height');
@@ -822,12 +1162,20 @@ export class Game {
       el.style.background = val > 80 ? '#ef4444' : (val > 50 ? '#f59e0b' : '#3b82f6');
     };
     
-    setGauge('left-arm', this.fatigue.leftArm);
-    setGauge('right-arm', this.fatigue.rightArm);
     // Show stamina as percentage of max (accounting for endurance bonus)
     const staminaPct = (Math.max(0, this.stamina) / (this.maxStamina || 100)) * 100;
     setGauge('stamina', staminaPct);
     setGauge('stress', this.stress);
+    
+    // Update mobile bottom bar
+    const mobileGauge = document.getElementById('mobile-gauge-stamina');
+    const mobileVal = document.getElementById('mobile-val-stamina');
+    if (mobileGauge) {
+      mobileGauge.style.width = Math.min(100, staminaPct) + '%';
+    }
+    if (mobileVal) {
+      mobileVal.textContent = Math.floor(staminaPct) + '%';
+    }
   }
 
   log(msg, type = 'info') {
@@ -839,6 +1187,97 @@ export class Game {
     logEl.prepend(d);
     if (logEl.children.length > 6) logEl.removeChild(logEl.lastChild);
   }
+  
+  _updateSpecialHolds(dt) {
+    if (this.state !== 'PLAYING') return;
+    
+    this.routeGen.holds.forEach(hold => {
+      const holdType = HOLD_TYPES[hold.type];
+      if (!holdType || !holdType.special) return;
+      
+      // Check if any limb is on this hold
+      const limbOnHold = LIMBS.find(limb => this.limbHolds[limb] === hold.id);
+      
+      switch(hold.type) {
+        case 'UNSTABLE':
+          if (limbOnHold) {
+            hold.unstableTimer = (hold.unstableTimer || 0) + dt;
+            if (hold.unstableTimer > hold.unstableThreshold) {
+              this.log(`⚠️ Prise instable détachée !`, 'warn');
+              this.limbHolds[limbOnHold] = null;
+              hold.detached = true;
+              this.stamina = Math.max(0, this.stamina - 10);
+            }
+          }
+          break;
+          
+        case 'TEMPORARY':
+          hold.lifetime = Math.max(0, hold.lifetime - dt);
+          if (hold.lifetime <= 0 && !hold.expired) {
+            hold.expired = true;
+            this.log(`⏱️ Prise temporaire disparue !`, 'warn');
+            if (limbOnHold) {
+              this.limbHolds[limbOnHold] = null;
+              this.stamina = Math.max(0, this.stamina - 15);
+            }
+          }
+          break;
+          
+        case 'CRUMBLING':
+          if (hold.durability <= 0 && !hold.crumbled) {
+            hold.crumbled = true;
+            this.log(`💥 Prise effritée !`, 'warn');
+            if (limbOnHold) {
+              this.limbHolds[limbOnHold] = null;
+              this.stamina = Math.max(0, this.stamina - 12);
+            }
+          }
+          break;
+          
+        case 'HOT':
+          if (limbOnHold) {
+            hold.hotTimer = (hold.hotTimer || 0) + dt;
+            if (hold.hotTimer > hold.hotThreshold) {
+              const burnDamage = 8 * dt; // Direct stamina damage
+              this.stamina = Math.max(0, this.stamina - burnDamage);
+              if (Math.floor(hold.hotTimer) > Math.floor(hold.hotTimer - dt)) {
+                this.log(`🔥 Prise brûlante !`, 'warn');
+              }
+            }
+          } else {
+            hold.hotTimer = 0;
+          }
+          break;
+          
+        case 'ELECTRIC':
+          hold.electricCycle = (hold.electricCycle || 0) + dt;
+          if (hold.electricCycle >= hold.electricPeriod) {
+            hold.electricCycle = 0;
+          }
+          hold.electricActive = (hold.electricCycle / hold.electricPeriod) < 0.3;
+          
+          if (hold.electricActive && limbOnHold && !hold.electricHit) {
+            this.stamina = Math.max(0, this.stamina - 15);
+            this.log(`⚡ Choc électrique !`, 'warn');
+            hold.electricHit = true;
+          }
+          if (!hold.electricActive) {
+            hold.electricHit = false;
+          }
+          break;
+      }
+    });
+  }
+  
+  _applyEnvironmentalCondition(dt) {
+    if (this.state !== 'PLAYING' || this.currentCondition === 'NONE') return;
+    
+    const condition = ENV_CONDITIONS[this.currentCondition];
+    if (!condition) return;
+    
+    const staminaDrain = (condition.staminaDrain - 1.0) * 0.5 * dt;
+    this.stamina = Math.max(0, this.stamina - staminaDrain);
+  }
 
   _animate() {
     const dt = Math.min(this.clock.getDelta(), 0.1);
@@ -846,7 +1285,8 @@ export class Game {
     if (this.state === 'PLAYING' || this.state === 'MENU') {
       this.climber.updatePose(
         this.limbPositions.leftHand, this.limbPositions.rightHand,
-        this.limbPositions.leftFoot, this.limbPositions.rightFoot
+        this.limbPositions.leftFoot, this.limbPositions.rightFoot,
+        this.bodyOffset
       );
 
       // Sync invisible hitboxes for clicking limbs
@@ -859,10 +1299,17 @@ export class Game {
 
     if (this.state === 'PLAYING') {
       this._updateFatigue(dt);
+      this._updateSpecialHolds(dt);
+      this._applyEnvironmentalCondition(dt);
       this._updateHUD();
 
       // Smooth camera follow
-      const targetY = this.climber.parts.torso.position.y + 0.4;
+      let targetY = 1.5;
+      if (this.climber.glbModel) {
+        targetY = this.climber.glbModel.position.y + 0.4;
+      } else if (this.climber.parts && this.climber.parts.torso) {
+        targetY = this.climber.parts.torso.position.y + 0.4;
+      }
       this.camera.position.y += (targetY - this.camera.position.y) * 4 * dt;
       
       // Keep sun relative to camera to preserve shadow quality

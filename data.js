@@ -4,14 +4,33 @@
 
 // ── Hold types ───────────────────────────────────────────────
 export const HOLD_TYPES = {
-  BAC:      { label: 'Bac',      color: 0x22c55e, fatigue: 0.4,  desc: 'Grande prise confortable',   size: 'large'  },
-  REGLETTE: { label: 'Réglette', color: 0x3b82f6, fatigue: 0.9,  desc: 'Prise plate horizontale',    size: 'medium' },
-  PINCETTE: { label: 'Pincette', color: 0xf59e0b, fatigue: 1.5,  desc: 'Se pince entre les doigts',  size: 'medium' },
-  PLAT:     { label: 'Plat',     color: 0xef4444, fatigue: 2.0,  desc: 'Friction, délicat',           size: 'medium' },
-  PETITE:   { label: 'Petite',   color: 0xa855f7, fatigue: 2.6,  desc: 'Microscopique, force pure',   size: 'small'  },
-  TROU:     { label: 'Mono',     color: 0x06b6d4, fatigue: 3.0,  desc: 'Un seul doigt, très dur',    size: 'small'  },
-  VOLUME:   { label: 'Volume',   color: 0x78716c, fatigue: 0.3,  desc: 'Grand volume en béton',      size: 'xlarge' },
-  RELAIS:   { label: 'Relais',   color: 0xfcd34d, fatigue: 0.0,  desc: 'Point de sauvegarde',        size: 'medium' },
+  // Basic holds
+  BAC:      { label: 'Bac',      color: 0x00ff9d, fatigue: 0.4,  desc: 'Grande prise confortable',   size: 'large'  },
+  REGLETTE: { label: 'Réglette', color: 0x00f2ff, fatigue: 0.9,  desc: 'Prise plate horizontale',    size: 'medium' },
+  PINCETTE: { label: 'Pincette', color: 0xff00ff, fatigue: 1.5,  desc: 'Se pince entre les doigts',  size: 'medium' },
+  PLAT:     { label: 'Plat',     color: 0x7000ff, fatigue: 2.0,  desc: 'Friction, délicat',           size: 'medium' },
+  PETITE:   { label: 'Petite',   color: 0xff0055, fatigue: 2.6,  desc: 'Microscopique, force pure',   size: 'small'  },
+  TROU:     { label: 'Mono',     color: 0xffe600, fatigue: 3.0,  desc: 'Un seul doigt, très dur',    size: 'small'  },
+  VOLUME:   { label: 'Volume',   color: 0x1e293b, fatigue: 0.3,  desc: 'Grand volume en béton',      size: 'xlarge' },
+  RELAIS:   { label: 'Relais',   color: 0xffffff, fatigue: 0.0,  desc: 'Point de sauvegarde',        size: 'medium' },
+  
+  // Special holds (variations)
+  UNSTABLE:  { label: 'Instable',   color: 0xff6b35, fatigue: 1.2,  desc: 'Bouge et peut se détacher',     size: 'medium', special: true },
+  TEMPORARY: { label: 'Temporaire', color: 0xffd23f, fatigue: 0.8,  desc: 'Disparaît après un temps',      size: 'medium', special: true },
+  SLIPPERY:  { label: 'Glissante',  color: 0x4ecdc4, fatigue: 1.35, desc: 'Augmente la fatigue +50%',      size: 'medium', special: true },
+  CRUMBLING: { label: 'Friable',    color: 0xa8763e, fatigue: 1.0,  desc: 'S\'effrite à chaque usage',     size: 'medium', special: true },
+  MAGNETIC:  { label: 'Magnétique', color: 0x9b59b6, fatigue: 0.9,  desc: 'Attire ou repousse',            size: 'medium', special: true },
+  HOT:       { label: 'Chaude',     color: 0xff4757, fatigue: 1.1,  desc: 'Brûle si trop longtemps',       size: 'medium', special: true },
+  ELECTRIC:  { label: 'Électrique', color: 0x00d2ff, fatigue: 1.0,  desc: 'Chocs électriques cycliques',   size: 'medium', special: true },
+};
+
+// ── Environmental conditions ─────────────────────────────────
+export const ENV_CONDITIONS = {
+  WIND:  { label: 'Vent',      icon: '💨', staminaDrain: 1.2, fatigueMult: 1.0,  desc: 'Force latérale, déstabilise' },
+  RAIN:  { label: 'Pluie',     icon: '🌧️', staminaDrain: 1.0, fatigueMult: 1.3,  desc: 'Prises glissantes, fatigue accrue' },
+  HEAT:  { label: 'Chaleur',   icon: '🔥', staminaDrain: 1.4, fatigueMult: 1.35, desc: 'Épuisement rapide, repos réduit' },
+  FOG:   { label: 'Brouillard', icon: '🌫️', staminaDrain: 1.0, fatigueMult: 1.0,  desc: 'Visibilité réduite' },
+  NONE:  { label: 'Normal',    icon: '☀️', staminaDrain: 1.0, fatigueMult: 1.0,  desc: 'Conditions normales' },
 };
 
 // ── Climbing grades (French system) ─────────────────────────
@@ -37,6 +56,13 @@ export const CURATED_ROUTES = [
   { mode:'BLOC', id:'b5', name:"L'Araignée Noire",       difficulty:5, grade:'7a', desc:"Mouvements dynamiques, prises microscopiques.", predefined: true },
   { mode:'BLOC', id:'b6', name:"Le Cobra",               difficulty:6, grade:'7c', desc:"Coordination parfaite requise.", predefined: true },
   { mode:'BLOC', id:'b7', name:"Silence (8c)",           difficulty:8, grade:'8c', desc:"Le Graal. Bon courage.", predefined: true },
+  
+  // NOUVELLES MÉCANIQUES
+  { mode:'BLOC', id:'jump-1',  name:"Le Grand Saut",        difficulty:4, grade:'6c', desc:"Testez la propulsion !", predefined: true },
+  { mode:'BLOC', id:'swing-1', name:"Le Pendule",          difficulty:3, grade:'6a', desc:"Testez le balancement !", predefined: true },
+  { mode:'BLOC', id:'dyno-1',  name:"Le Vol Plané",        difficulty:5, grade:'7a', desc:"Saut massif (Dyno).",    predefined: true },
+  { mode:'BLOC', id:'swing-2', name:"L'Horloge",           difficulty:4, grade:'6b', desc:"Coordination de balancement.", predefined: true },
+  { mode:'BLOC', id:'no-feet-1', name:"La Traction Pure",  difficulty:6, grade:'7b', desc:"Bras uniquement (No-Feet).",  predefined: true },
   
   // BLOC ALÉATOIRE
   { mode:'BLOC', id:'br1', name:"🎲 Bloc Aléatoire Facile",    difficulty:1, grade:'4',  desc:"Nouveau bloc à chaque fois.", predefined: false },
@@ -72,11 +98,14 @@ export const LIMB_LABELS = {
   rightFoot: 'Pied D',
 };
 
-// ── Body proportions (metres, 1 unit = 1 m) ─────────────────
-export const ARM_UPPER = 0.28;
-export const ARM_LOWER = 0.26;
-export const LEG_UPPER = 0.40;
-export const LEG_LOWER = 0.38;
+// ============================================================
+// CHARACTER DIMENSIONS (Elite Athlete Proportions)
+// ============================================================
+export const ARM_UPPER = 0.22;
+export const ARM_LOWER = 0.20;
+export const LEG_UPPER = 0.32;
+export const LEG_LOWER = 0.30;
+
 export const ARM_REACH = ARM_UPPER + ARM_LOWER;
 export const LEG_REACH = LEG_UPPER + LEG_LOWER;
 
@@ -186,32 +215,138 @@ export class RouteGenerator {
       8: ['TROU','TROU','PETITE','PETITE'],
       9: ['TROU','TROU','TROU','PETITE'],
     };
+    
+    // Special holds pools based on difficulty
+    const specialPools = {
+      1: [],
+      2: ['SLIPPERY'],
+      3: ['SLIPPERY', 'UNSTABLE'],
+      4: ['SLIPPERY', 'UNSTABLE', 'CRUMBLING'],
+      5: ['SLIPPERY', 'UNSTABLE', 'CRUMBLING', 'HOT'],
+      6: ['SLIPPERY', 'UNSTABLE', 'CRUMBLING', 'HOT', 'MAGNETIC'],
+      7: ['SLIPPERY', 'UNSTABLE', 'CRUMBLING', 'HOT', 'MAGNETIC', 'TEMPORARY'],
+      8: ['SLIPPERY', 'UNSTABLE', 'CRUMBLING', 'HOT', 'MAGNETIC', 'TEMPORARY', 'ELECTRIC'],
+      9: ['SLIPPERY', 'UNSTABLE', 'CRUMBLING', 'HOT', 'MAGNETIC', 'TEMPORARY', 'ELECTRIC'],
+    };
+    
     const pool  = pools[Math.min(9, Math.max(1, difficulty))];
+    const specialPool = specialPools[Math.min(9, Math.max(1, difficulty))];
     const count = Math.round((yTo - yFrom) * 4.0);
     const stepY = (yTo - yFrom) / Math.max(count, 1);
     
     let pathX = 0; // The central line of the route
+    let lastHoldX = 0;
+    let lastHoldY = yFrom;
 
     for (let i = 0; i < count; i++) {
       const y = yFrom + i * stepY + (this.rng() - 0.5) * stepY * 0.5;
       
-      // Make the route wander left and right, reduced range for mobile visibility
-      pathX += (this.rng() - 0.5) * (mode === 'BLOC' ? 0.6 : 0.2);
-      pathX = Math.max(-1.5, Math.min(1.5, pathX)); // Reduced from ±3.0 to ±1.5
+      // ZIGZAG HORIZONTAL: Make route go left-right more aggressively on higher difficulties
+      const zigzagIntensity = Math.min(1.5, difficulty * 0.15); // 0 to 1.5
+      pathX += (this.rng() - 0.5) * (mode === 'BLOC' ? 1.2 : 0.6) * zigzagIntensity;
+      pathX = Math.max(-2.5, Math.min(2.5, pathX)); // Wider range for zigzag
       
-      const x = pathX + (this.rng() - 0.5) * 0.8; // Reduced from 1.2 to 0.8
+      const x = pathX + (this.rng() - 0.5) * 0.8;
       
       let type = pool[Math.floor(this.rng() * pool.length)];
 
-      // Sprinkle volumes on the sides of the path, closer to center
+      // Sprinkle volumes on the sides of the path
       if (type === 'VOLUME') {
-        const side = this.rng() < 0.5 ? -0.6 : 0.6; // Reduced from ±0.85
-        this._add(side * (0.6 + this.rng() * 0.3), y, 0.01, 'VOLUME', 'Volume'); // Reduced spread
+        const side = this.rng() < 0.5 ? -0.8 : 0.8;
+        this._add(side * (0.7 + this.rng() * 0.4), y, 0.01, 'VOLUME', 'Volume');
         continue;
+      }
+      
+      // FORCED 3-LIMB SECTIONS: On high difficulty, create gaps that require releasing a limb
+      const shouldCreateGap = difficulty >= 5 && this.rng() < 0.15; // 15% chance on diff 5+
+      
+      if (shouldCreateGap && i > 5) {
+        // Create a horizontal traverse that's too wide for 4 limbs
+        const gapDirection = this.rng() < 0.5 ? -1 : 1;
+        const gapDistance = 1.2 + this.rng() * 0.8; // 1.2-2.0m horizontal gap
+        
+        // First hold of the gap
+        this._add(lastHoldX, lastHoldY + 0.3, 0.02, 'REGLETTE', '⚠️ Traverse');
+        
+        // Middle hold (far away, requires releasing a limb)
+        const gapX = lastHoldX + (gapDistance * gapDirection);
+        this._add(gapX, lastHoldY + 0.4, 0.02, 'PINCETTE', '⚠️ Dyno');
+        
+        // Exit hold
+        this._add(gapX + (0.3 * gapDirection), lastHoldY + 0.8, 0.02, 'BAC', 'Repos');
+        
+        lastHoldX = gapX + (0.3 * gapDirection);
+        lastHoldY = lastHoldY + 0.8;
+        pathX = lastHoldX;
+        
+        i += 2; // Skip ahead since we added 3 holds
+        continue;
+      }
+      
+      // OVERHANG SECTIONS: Create roof sections on high difficulty
+      const shouldCreateOverhang = difficulty >= 6 && this.rng() < 0.12; // 12% chance on diff 6+
+      
+      if (shouldCreateOverhang && i > 5) {
+        // Create a roof/overhang section (horizontal ceiling)
+        const overhangLength = 3 + Math.floor(this.rng() * 3); // 3-5 holds
+        
+        for (let oh = 0; oh < overhangLength; oh++) {
+          const ohX = lastHoldX + (oh * 0.4 * (this.rng() < 0.5 ? -1 : 1));
+          const ohY = lastHoldY + (oh * 0.15); // Slight upward progression
+          this._add(ohX, ohY, 0.02, oh === 0 ? 'BAC' : (oh === overhangLength - 1 ? 'BAC' : 'REGLETTE'), 
+                    oh === 0 ? '🔺 Dévers' : (oh === overhangLength - 1 ? '🔺 Sortie' : '🔺 Toit'));
+        }
+        
+        lastHoldX = lastHoldX + ((overhangLength - 1) * 0.4 * (this.rng() < 0.5 ? -1 : 1));
+        lastHoldY = lastHoldY + ((overhangLength - 1) * 0.15);
+        pathX = lastHoldX;
+        
+        i += overhangLength - 1;
+        continue;
+      }
+      
+      // Add special holds based on difficulty (keep 60% normal holds minimum)
+      if (specialPool.length > 0 && this.rng() < 0.4) {
+        type = specialPool[Math.floor(this.rng() * specialPool.length)];
       }
 
       const ht = HOLD_TYPES[type];
-      this._add(x, y, 0.02, type, ht.label + ' #' + this._nextId);
+      const hold = this._add(x, y, 0.02, type, ht.label + ' #' + this._nextId);
+      
+      lastHoldX = x;
+      lastHoldY = y;
+      
+      // Add special properties to special holds
+      if (ht.special) {
+        const lastHold = this.holds[this.holds.length - 1];
+        
+        switch(type) {
+          case 'UNSTABLE':
+            lastHold.unstableTimer = 0;
+            lastHold.unstableThreshold = 3 + this.rng() * 3; // 3-6 seconds
+            break;
+          case 'TEMPORARY':
+            lastHold.lifetime = 8 + this.rng() * 4; // 8-12 seconds
+            lastHold.maxLifetime = lastHold.lifetime;
+            break;
+          case 'CRUMBLING':
+            lastHold.durability = 2 + Math.floor(this.rng() * 2); // 2-3 uses
+            lastHold.maxDurability = lastHold.durability;
+            break;
+          case 'HOT':
+            lastHold.hotTimer = 0;
+            lastHold.hotThreshold = 2 + this.rng() * 2; // 2-4 seconds tolerance
+            break;
+          case 'MAGNETIC':
+            lastHold.magneticPolarity = this.rng() < 0.5 ? 'attract' : 'repel';
+            break;
+          case 'ELECTRIC':
+            lastHold.electricCycle = 0;
+            lastHold.electricPeriod = 3 + this.rng() * 2; // 3-5 seconds cycle
+            lastHold.electricActive = false;
+            break;
+        }
+      }
 
       // Checkpoint every 20m
       if (addCheckpoints && Math.floor(y / 20) > Math.floor((y - stepY) / 20)) {

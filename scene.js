@@ -174,10 +174,9 @@ export function buildScene(container) {
   skyCanvas.width = 2; skyCanvas.height = 256;
   const sCtx = skyCanvas.getContext('2d');
   const grad  = sCtx.createLinearGradient(0, 0, 0, 256);
-  grad.addColorStop(0,   '#0f1f3a');
-  grad.addColorStop(0.3, '#1a4a70');
-  grad.addColorStop(0.7, '#4a8ab5');
-  grad.addColorStop(1,   '#c9dfc4');
+  grad.addColorStop(0,   '#05070a');
+  grad.addColorStop(0.5, '#0a0f1d');
+  grad.addColorStop(1,   '#1e1b4b');
   sCtx.fillStyle = grad;
   sCtx.fillRect(0, 0, 2, 256);
   scene.background = new THREE.CanvasTexture(skyCanvas);
@@ -187,26 +186,29 @@ export function buildScene(container) {
   camera.position.set(0, 1.5, 2.8);
   camera.lookAt(0, 1.5, 0);
 
-  // Ambient
-  scene.add(new THREE.AmbientLight(0x8899bb, 0.55));
+  // Ambient & Environment
+  scene.add(new THREE.AmbientLight(0x445577, 0.2));
+  const hemi = new THREE.HemisphereLight(0x00f2ff, 0x7000ff, 0.4);
+  scene.add(hemi);
 
-  // Sun (directional with shadow)
-  const sun = new THREE.DirectionalLight(0xffeedd, 1.9);
-  sun.position.set(2.5, 12, 5);
+  // Sun (directional with high-quality shadow)
+  const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+  sun.position.set(5, 15, 8);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
-  sun.shadow.camera.left   = -4;
-  sun.shadow.camera.right  =  4;
+  sun.shadow.mapSize.set(4096, 4096);
+  sun.shadow.camera.left   = -5;
+  sun.shadow.camera.right  =  5;
   sun.shadow.camera.top    =  30;
-  sun.shadow.camera.bottom = -1;
-  sun.shadow.camera.near   =  0.1;
+  sun.shadow.camera.bottom = -5;
+  sun.shadow.camera.near   =  0.5;
   sun.shadow.camera.far    =  60;
+  sun.shadow.bias = -0.0005; // Reduce shadow acne
   scene.add(sun);
   scene.add(sun.target);
 
-  // Fill light
-  const fill = new THREE.DirectionalLight(0xaaccff, 0.40);
-  fill.position.set(-2, 6, 3);
+  // Fill light for character volume
+  const fill = new THREE.PointLight(0x7000ff, 1.2, 10);
+  fill.position.set(-3, 2, 4);
   scene.add(fill);
 
   // Wall (faces +Z)

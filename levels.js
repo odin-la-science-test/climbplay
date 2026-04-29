@@ -158,6 +158,88 @@ export const PREDEFINED_LEVELS = {
       
       { x: 0.00, y: 15.00, z: 0.02, type: 'BAC', isTop: true }
     ]
+  },
+  
+  // ══════════ MECHANIC TESTS ══════════
+  'jump-1': {
+    name: "Le Grand Saut",
+    mode: 'BLOC',
+    difficulty: 4,
+    grade: '6c',
+    desc: "Un saut dynamique est nécessaire pour continuer.",
+    holds: [
+      { x: -0.22, y: 0.50, z: 0.02, type: 'BAC', isStart: true },
+      { x: 0.22, y: 0.50, z: 0.02, type: 'BAC', isStart: true },
+      { x: 0.00, y: 1.20, z: 0.02, type: 'BAC', isStart: true },
+      
+      // The gap
+      { x: 0.00, y: 3.20, z: 0.02, type: 'BAC' }, // Very far
+      
+      { x: -0.30, y: 3.80, z: 0.02, type: 'REGLETTE' },
+      { x: 0.00, y: 5.00, z: 0.02, type: 'BAC', isTop: true }
+    ]
+  },
+
+  'swing-1': {
+    name: "Le Pendule",
+    mode: 'BLOC',
+    difficulty: 3,
+    grade: '6a',
+    desc: "Balancez votre corps pour atteindre les prises latérales.",
+    holds: [
+      { x: 0.00, y: 1.00, z: 0.02, type: 'BAC', isStart: true },
+      
+      // Side holds far away
+      { x: -1.20, y: 2.50, z: 0.02, type: 'BAC' },
+      { x: 1.20, y: 2.50, z: 0.02, type: 'BAC' },
+      
+      { x: 0.00, y: 4.50, z: 0.02, type: 'BAC', isTop: true }
+    ]
+  },
+
+  'dyno-1': {
+    name: "Le Vol Plané",
+    mode: 'BLOC',
+    difficulty: 5,
+    grade: '7a',
+    desc: "Un saut massif vers le haut. Prenez de l'élan !",
+    holds: [
+      { x: 0.00, y: 0.80, z: 0.02, type: 'BAC', isStart: true },
+      // Huge gap
+      { x: 0.00, y: 3.80, z: 0.02, type: 'BAC' },
+      { x: 0.00, y: 5.00, z: 0.02, type: 'BAC', isTop: true }
+    ]
+  },
+
+  'swing-2': {
+    name: "L'Horloge",
+    mode: 'BLOC',
+    difficulty: 4,
+    grade: '6b',
+    desc: "Balancez-vous de gauche à droite pour progresser.",
+    holds: [
+      { x: 0.00, y: 1.00, z: 0.02, type: 'BAC', isStart: true },
+      { x: -1.00, y: 2.20, z: 0.02, type: 'BAC' },
+      { x: 1.00, y: 3.40, z: 0.02, type: 'BAC' },
+      { x: -0.80, y: 4.60, z: 0.02, type: 'BAC' },
+      { x: 0.00, y: 5.50, z: 0.02, type: 'BAC', isTop: true }
+    ]
+  },
+
+  'no-feet-1': {
+    name: "La Traction Pure",
+    mode: 'BLOC',
+    difficulty: 6,
+    grade: '7b',
+    desc: "Pas de prises de pieds. Utilisez uniquement vos bras !",
+    holds: [
+      { x: -0.20, y: 1.20, z: 0.02, type: 'BAC', isStart: true },
+      { x: 0.20, y: 1.20, z: 0.02, type: 'BAC', isStart: true },
+      // No feet reachable below
+      { x: -0.15, y: 2.50, z: 0.02, type: 'PINCETTE' },
+      { x: 0.15, y: 3.80, z: 0.02, type: 'REGLETTE' },
+      { x: 0.00, y: 5.00, z: 0.02, type: 'BAC', isTop: true }
+    ]
   }
 };
 
