@@ -7,108 +7,165 @@ import { getLevel } from './levels.js';
 // ============================================================
 // PROFILE — Save/Load stats and skins with daily progression
 // ============================================================
+/**
+ * PROFILE — Individual user data and logic
+ */
 class Profile {
-  constructor() {
-    this.xp = 0;
-    this.records = { VOIE: 0, BLOC: 0 };
-    this.settings = { skinId: 0, sound: false };
-    this.displayName = 'Grimpeur';
-    this.checkpointsHit = 0;
-    this.history = [];
-    
-    // Daily progression system
-    this.dailyStats = {
-      lastPlayDate: null,        // Last date played (YYYY-MM-DD)
-      consecutiveDays: 0,        // Streak of consecutive days
-      totalDaysPlayed: 0,        // Total unique days played
-      enduranceBonus: 0,         // Bonus endurance from training (0-100)
-      sessionsToday: 0           // Number of sessions today
+  constructor(data = {}) {
+    this.name = data.name || 'Grimpeur';
+    this.xp = data.xp || 0;
+    this.records = data.records || { VOIE: 0, BLOC: 0 };
+    this.completedRoutes = data.completedRoutes || []; // Array of route IDs
+    this.settings = data.settings || { skinId: 'climber-default', swingEnabled: true };
+    this.checkpointsHit = data.checkpointsHit || 0;
+    this.history = data.history || [];
+    this.dailyStats = data.dailyStats || {
+      lastPlayDate: null,
+      consecutiveDays: 0,
+      totalDaysPlayed: 0,
+      enduranceBonus: 0,
+      sessionsToday: 0
     };
     
-    this.load();
     this.updateDailyStats();
   }
-  
-  load() {
-    try {
-      const data = JSON.parse(localStorage.getItem('calcaire_v2_profile'));
-      if (data) {
-        Object.assign(this, data);
-        // Ensure dailyStats exists for old saves
-        if (!this.dailyStats) {
-          this.dailyStats = {
-            lastPlayDate: null,
-            consecutiveDays: 0,
-            totalDaysPlayed: 0,
-            enduranceBonus: 0,
-            sessionsToday: 0
-          };
-        }
-      }
-    } catch(e) {}
+
+  // Get display name for UI
+  get displayName() { return this.name; }
+
+  save(manager) {
+    if (manager) manager.save();
   }
-  
-  save() {
-    localStorage.setItem('calcaire_v2_profile', JSON.stringify(this));
-  }
-  
+
   addHistory(entry) {
+    this.history = this.history || [];
     this.history.unshift(entry);
     if (this.history.length > 20) this.history.pop();
   }
-  
-  // Update daily stats and calculate endurance bonus
+
   updateDailyStats() {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    
+    const today = new Date().toISOString().split('T')[0];
     if (this.dailyStats.lastPlayDate !== today) {
-      // New day!
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = yesterday.toISOString().split('T')[0];
       
-      if (this.dailyStats.lastPlayDate === yesterdayStr) {
-        // Consecutive day
-        this.dailyStats.consecutiveDays++;
-      } else if (this.dailyStats.lastPlayDate !== null) {
-        // Streak broken
-        this.dailyStats.consecutiveDays = 1;
-      } else {
-        // First day
-        this.dailyStats.consecutiveDays = 1;
-      }
+      if (this.dailyStats.lastPlayDate === yesterdayStr) this.dailyStats.consecutiveDays++;
+      else if (this.dailyStats.lastPlayDate !== null) this.dailyStats.consecutiveDays = 1;
+      else this.dailyStats.consecutiveDays = 1;
       
       this.dailyStats.lastPlayDate = today;
       this.dailyStats.totalDaysPlayed++;
       this.dailyStats.sessionsToday = 0;
-      
-      // Calculate endurance bonus: +2% per consecutive day, max 100%
       this.dailyStats.enduranceBonus = Math.min(100, this.dailyStats.consecutiveDays * 2);
-      
-      this.save();
     }
   }
-  
-  // Record a session (called when starting a climb)
+
   recordSession() {
     this.dailyStats.sessionsToday++;
-    this.save();
   }
-  
-  // Get stamina multiplier based on training
+
   getStaminaMultiplier() {
-    // Base: 1.0, with bonus up to 2.0 (100% more stamina)
     return 1.0 + (this.dailyStats.enduranceBonus / 100);
   }
 }
+
+/**
+ * PROFILE MANAGER — Handles multiple user profiles
+ */
+class ProfileManager {
+  constructor() {
+    const rawProfiles = JSON.parse(localStorage.getItem('climbplay_profiles') || '{}');
+    this.profiles = {};
+    Object.keys(rawProfiles).forEach(name => {
+      this.profiles[name] = new Profile(rawProfiles[name]);
+    });
+
+    this.currentName = localStorage.getItem('climbplay_current_user') || null;
+    this.current = null;
+    this.onProfileLoaded = null;
+
+    // Migrate old profile if exists
+    const oldData = localStorage.getItem('calcaire_v2_profile');
+    if (oldData && Object.keys(this.profiles).length === 0) {
+      const parsed = JSON.parse(oldData);
+      const name = parsed.displayName || 'Grimpeur_1';
+      this.profiles[name] = new Profile({ name, ...parsed });
+      localStorage.removeItem('calcaire_v2_profile');
+      this.save();
+    }
+
+    this._initUI();
+  }
+
+  _initUI() {
+    const list = document.getElementById('profile-list');
+    const createBtn = document.getElementById('create-profile-btn');
+    const nameInput = document.getElementById('new-profile-name');
+    const overlay = document.getElementById('auth-overlay');
+
+    const refreshList = () => {
+      list.innerHTML = '';
+      Object.keys(this.profiles).forEach(name => {
+        const div = document.createElement('div');
+        div.className = 'profile-item';
+        div.innerHTML = `<span>👤 ${name}</span> <span style="font-size: 0.8rem; opacity: 0.6;">${this.profiles[name].records.BLOC} blocs</span>`;
+        div.onclick = () => select(name);
+        list.appendChild(div);
+      });
+    };
+
+    const select = (name) => {
+      this.currentName = name;
+      this.current = this.profiles[name];
+      this.current.updateDailyStats();
+      localStorage.setItem('climbplay_current_user', name);
+      
+      overlay.style.transition = 'opacity 0.5s ease';
+      overlay.style.opacity = '0';
+      overlay.style.pointerEvents = 'none';
+      
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        if (this.onProfileLoaded) this.onProfileLoaded();
+      }, 500);
+    };
+
+    createBtn.onclick = () => {
+      const name = nameInput.value.trim();
+      if (!name) return;
+      if (this.profiles[name]) { alert('Ce profil existe déjà !'); return; }
+      
+      this.profiles[name] = new Profile({ name });
+      this.save();
+      select(name);
+    };
+
+    refreshList();
+  }
+
+  save() {
+    localStorage.setItem('climbplay_profiles', JSON.stringify(this.profiles));
+  }
+
+  getGymRecord(routeId) {
+    const finishers = [];
+    Object.values(this.profiles).forEach(p => {
+      if (p.completedRoutes && p.completedRoutes.includes(routeId)) {
+        finishers.push(p.name);
+      }
+    });
+    return finishers;
+  }
+}
+
 
 // ============================================================
 // GAME ENGINE
 // ============================================================
 export class Game {
   constructor() {
-    this.profile = new Profile();
-    this.state = 'MENU'; // MENU, PLAYING, FALLEN
+    this.state = 'MENU'; // MENU, PLAYING, FALLING, SUCCESS
     this.mode = 'VOIE';
     this.difficulty = 1;
     
@@ -129,17 +186,23 @@ export class Game {
     this.currentCondition = 'NONE';
     this.conditionIntensity = 1.0;
 
-    // Swinging & Jumping state
+    // Physics
     this.bodyOffset = new THREE.Vector3(0, 0, 0);
     this.bodyVelocity = new THREE.Vector3(0, 0, 0);
-    this.isJumping = false;
     this.isDraggingTorso = false;
+    this.mouseWorld = new THREE.Vector3();
     
-    this.init();
+    // Multi-Profile Support
+    this.profileManager = new ProfileManager();
+    this.profileManager.onProfileLoaded = () => {
+      this.profile = this.profileManager.current;
+      this.init();
+    };
   }
 
   init() {
     const container = document.getElementById('canvas-container');
+    if (!container) return;
     container.style.touchAction = 'none';
     const s = buildScene(container);
     Object.assign(this, s);
@@ -173,6 +236,31 @@ export class Game {
     this.routeGen = new RouteGenerator();
     this.holdMeshes = [];
     
+    // ── CRASHPAD (Starting Ground)
+    const padGroup = new THREE.Group();
+    // Main pad
+    const mainPad = new THREE.Mesh(
+      new THREE.BoxGeometry(6, 0.4, 3),
+      new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.9 })
+    );
+    mainPad.receiveShadow = true;
+    mainPad.castShadow = true;
+    padGroup.add(mainPad);
+    // Border
+    const border = new THREE.Mesh(
+      new THREE.BoxGeometry(6.2, 0.38, 3.2),
+      new THREE.MeshStandardMaterial({ color: 0x0f172a })
+    );
+    border.position.y = -0.02;
+    padGroup.add(border);
+    // Side pads
+    const side1 = mainPad.clone(); side1.scale.set(0.4, 1, 0.8); side1.position.set(-4, 0, 0); side1.material = side1.material.clone(); side1.material.color.set(0x334155); padGroup.add(side1);
+    const side2 = side1.clone(); side2.position.set(4, 0, 0); padGroup.add(side2);
+    
+    padGroup.position.set(0, -0.2, 0.5);
+    this.scene.add(padGroup);
+    this.crashpad = padGroup;
+    
     this.routeGen.reset('VOIE', 1, false, true);
     this._syncHolds();
     this._syncPositionsFromHolds();
@@ -204,6 +292,14 @@ export class Game {
   }
 
   _setupUI() {
+    // Logout handling
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+      logoutBtn.onclick = () => {
+        localStorage.removeItem('climbplay_current_user');
+        window.location.reload();
+      };
+    }
     // ── Theme Toggle
     this._initTheme();
     
@@ -326,8 +422,18 @@ export class Game {
     // ── Profile save
     document.getElementById('btn-save-profile').onclick = () => {
       const nm = document.getElementById('input-name').value.trim();
-      if (nm) { this.profile.displayName = nm; this.profile.save(); this._renderProfilePanel(); }
+      if (nm) { this.profile.name = nm; this.profileManager.save(); this._renderProfilePanel(); }
     };
+
+    // ── Swing Toggle
+    const swingToggle = document.getElementById('toggle-swing');
+    if (swingToggle) {
+      swingToggle.onchange = () => {
+        this.profile.settings.swingEnabled = swingToggle.checked;
+        this.profileManager.save();
+        this.log(this.profile.settings.swingEnabled ? "Balancier activé" : "Balancier désactivé", 'info');
+      };
+    }
 
     // ── Retry
     document.getElementById('btn-next-climb').onclick = () => this.showMenu();
@@ -336,17 +442,49 @@ export class Game {
   _renderRouteList() {
     const list = document.getElementById('route-list');
     list.innerHTML = '';
-    const routes = CURATED_ROUTES.filter(r => r.mode === this._currentMode);
+    
+    // Get current week of year for rotation (1-52)
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 1);
+    const diff = now - start;
+    const oneWeek = 1000 * 60 * 60 * 24 * 7;
+    const currentWeek = Math.floor(diff / oneWeek) + 1;
+    const rotationIndex = (currentWeek % 4) + 1; // We have 4 rotation slots
+
+    const routes = CURATED_ROUTES.filter(r => {
+      if (r.mode !== this._currentMode) return false;
+      if (r.permanent) return true;
+      if (r.rotation) return r.rotation === rotationIndex;
+      return true; // Random routes etc
+    });
+    
     routes.forEach(route => {
       const gradeInfo = Object.values(GRADES).find(g => g.label === route.grade) || { color: '#f97316' };
+      const finishers = this.profileManager.getGymRecord(route.id);
+      const isCompletedByMe = this.profile.completedRoutes?.includes(route.id);
+      
       const card = document.createElement('div');
       card.className = 'route-card' + (this.selectedRoute?.id === route.id ? ' selected' : '');
+      
+      let finishersHTML = '';
+      if (finishers.length > 0) {
+        const others = finishers.filter(n => n !== this.profile.name);
+        if (others.length > 0) {
+          finishersHTML = `<div class="gym-record">🏆 ${others.join(', ')}</div>`;
+        }
+      }
+
       card.innerHTML = `
         <div class="route-card-grade" style="color:${gradeInfo.color}; border-color:${gradeInfo.color}">${route.grade}</div>
         <div class="route-card-info">
-          <div class="route-card-name">${route.name}</div>
+          <div class="route-card-name">
+            ${route.name} 
+            ${isCompletedByMe ? '<span class="top-badge">TOP ✓</span>' : ''}
+          </div>
           <div class="route-card-desc">${route.desc}</div>
+          ${finishersHTML}
         </div>`;
+        
       card.onclick = () => {
         this.selectedRoute = route;
         document.querySelectorAll('.route-card').forEach(c => c.classList.remove('selected'));
@@ -410,6 +548,10 @@ export class Game {
     document.getElementById('profile-avatar').textContent = initials;
     document.getElementById('profile-display-name').textContent = p.displayName;
     document.getElementById('input-name').value = p.displayName;
+    
+    // Sync swing toggle
+    const swingToggle = document.getElementById('toggle-swing');
+    if (swingToggle) swingToggle.checked = p.settings.swingEnabled !== false;
     document.getElementById('stat-xp').textContent = p.xp;
     document.getElementById('stat-voie').textContent = p.records.VOIE.toFixed(1) + 'm';
     document.getElementById('stat-bloc').textContent = p.records.BLOC ? 'TOP ✓' : '—';
@@ -492,6 +634,7 @@ export class Game {
     this.isInfinite = isInfinite;
     this.state = 'PLAYING';
     this.checkpointsHitThisRun = 0;
+    this._hasLanded = false;
 
     this.stamina = 100;
     
@@ -543,6 +686,37 @@ export class Game {
     }
     
     this._syncHolds();
+
+    // ── TUTORIAL SYSTEM
+    const TUTORIALS = {
+      'e2': {
+        title: "Le Balancement",
+        icon: "↔️",
+        msg: "Cliquez et <b>glissez votre torse</b> latéralement pour déplacer votre centre de gravité et atteindre des prises lointaines."
+      }
+    };
+
+    const tut = TUTORIALS[this.selectedRoute?.id];
+    if (tut) {
+      const overlay = document.getElementById('tutorial-overlay');
+      if (overlay) {
+        document.getElementById('tut-title').textContent = tut.title;
+        document.getElementById('tut-icon').textContent = tut.icon;
+        document.getElementById('tut-msg').innerHTML = tut.msg;
+        overlay.style.display = 'flex';
+        overlay.classList.remove('hidden');
+        
+        const closeTut = (e) => {
+          if (e) e.stopPropagation();
+          overlay.classList.add('hidden');
+          setTimeout(() => overlay.style.display = 'none', 300);
+          window.removeEventListener('pointerdown', closeTut);
+          window.removeEventListener('keydown', closeTut);
+        };
+        window.addEventListener('pointerdown', closeTut);
+        window.addEventListener('keydown', closeTut);
+      }
+    }
 
     this.limbHolds = { leftHand: 3, rightHand: 4, leftFoot: 1, rightFoot: 2 };
     
@@ -599,13 +773,22 @@ export class Game {
     this.profile.xp += xpGain;
     this.profile.checkpointsHit = (this.profile.checkpointsHit || 0) + (this.checkpointsHitThisRun || 0);
 
+    const isWin = reason.includes('TOP') || reason.includes('RELAIS');
+    if (isWin && this.selectedRoute) {
+      if (!this.profile.completedRoutes) this.profile.completedRoutes = [];
+      if (!this.profile.completedRoutes.includes(this.selectedRoute.id)) {
+        this.profile.completedRoutes.push(this.selectedRoute.id);
+        if (this.mode === 'BLOC') this.profile.records.BLOC = (this.profile.records.BLOC || 0) + 1;
+      }
+    }
+
     if (this.mode !== 'BLOC' && height > this.profile.records.VOIE) this.profile.records.VOIE = height;
     this.profile.addHistory({ name: this.selectedRoute?.name || this.mode, height: height.toFixed(1), xp: xpGain });
-    this.profile.save();
+    this.profileManager.save();
 
     document.getElementById('hud').style.display = 'none';
     document.getElementById('basecamp-overlay').style.display = 'flex';
-    const isWin = reason.includes('TOP') || reason.includes('RELAIS');
+    
     const titleEl = document.getElementById('fall-title');
     if (titleEl) titleEl.textContent = isWin ? '🏆 Bravo !' : '⛺ Camp de Base';
     document.getElementById('fall-reason').textContent = reason;
@@ -628,7 +811,7 @@ export class Game {
       return rc.intersectObjects(objects, true)[0];
     };
 
-    // Grab Limb
+    // Grab Limb or Torso
     window.addEventListener('pointerdown', e => {
       if (this.state !== 'PLAYING') return;
       
@@ -640,7 +823,7 @@ export class Game {
         if (hit.object.userData.limb) {
           this.activeLimb = hit.object.userData.limb;
           this.isDraggingTorso = false;
-        } else {
+        } else if (this.profile.settings.swingEnabled !== false) {
           this.isDraggingTorso = true;
           this.activeLimb = null;
         }
@@ -658,16 +841,15 @@ export class Game {
       mouse.y = -(e.clientY / innerHeight) * 2 + 1;
       rc.setFromCamera(mouse, this.camera);
       
+      const hit = rc.ray.intersectPlane(this.dragPlane, new THREE.Vector3());
+      if (hit) this.mouseWorld = hit;
+      
       if (!this.activeLimb && !this.isDraggingTorso) {
         const objectsToHover = [...Object.values(this.limbHandles)];
         if (this.climber.parts.torso) objectsToHover.push(this.climber.parts.torso);
         const hoverHit = rc.intersectObjects(objectsToHover, true)[0];
         document.body.style.cursor = hoverHit ? 'grab' : 'default';
-        return;
-      }
-      
-      const hit = rc.ray.intersectPlane(this.dragPlane, new THREE.Vector3());
-      if (hit) {
+      } else if (hit) {
         if (this.activeLimb) {
           this.limbPositions[this.activeLimb].copy(hit);
           
@@ -685,7 +867,7 @@ export class Game {
                const dy = h.y - hit.y;
                let d, threshold;
                if (h.type === 'VOLUME') { d = Math.sqrt(dx*dx + dy*dy); threshold = 0.35; }
-               else { const dz = (h.z + 0.01) - hit.z; d = Math.sqrt(dx*dx + dy*dy + dz*dz); threshold = 0.25; }
+               else { const dz = (h.z + 0.01) - hit.z; d = Math.sqrt(dx*dx + dy*dy + dz*dz); threshold = 0.40; }
                if (d < threshold && d < minDist) { minDist = d; nearest = h; }
             });
             if (nearest) currentHitHold = this.holdMeshes.find(m => m.userData.holdId === nearest.id);
@@ -790,12 +972,20 @@ export class Game {
           this.log(`Prise trop loin !`, 'warn');
         }
       } else {
-        // Released limb goes back to resting position behind the body
-        this.limbHolds[this.activeLimb] = null;
-        this.log(`${LIMB_LABELS[this.activeLimb]} relâché(e) - retour au repos`, 'warn');
-        
-        if (this.limbHolds.leftHand === null && this.limbHolds.rightHand === null) {
-          this.fall("Vous avez lâché les deux mains !");
+        // Release logic
+        if (this.activeLimb.includes('Foot')) {
+          // TECHNIQUE: ADHÉRENCE (SMEARING)
+          // If a foot is released in the air, it can "smear" on the wall
+          this.limbHolds[this.activeLimb] = 'SMEAR';
+          this.log(`👟 ${LIMB_LABELS[this.activeLimb]} en Adhérence (Friction)`, 'info');
+        } else {
+          // Released hand goes back to resting position
+          this.limbHolds[this.activeLimb] = null;
+          this.log(`${LIMB_LABELS[this.activeLimb]} relâché(e) - retour au repos`, 'warn');
+          
+          if (this.limbHolds.leftHand === null && this.limbHolds.rightHand === null) {
+            this.fall("Vous avez lâché les deux mains !");
+          }
         }
       }
       
@@ -810,8 +1000,6 @@ export class Game {
       if (this.state !== 'PLAYING') return;
       if (e.code === 'KeyR') {
         this._performRest();
-      } else if (e.code === 'Space') {
-        this._performJump();
       } else if (e.code === 'Escape') {
         this.showMenu();
       }
@@ -862,20 +1050,6 @@ export class Game {
     } else {
       this.log("Plus de repos disponibles !", 'warn');
     }
-  }
-
-  _performJump() {
-    if (this.isJumping || this.state !== 'PLAYING') return;
-    
-    // Jump strength: base + momentum
-    this.isJumping = true;
-    this.bodyVelocity.y += 4.5; // Upward boost
-    this.bodyVelocity.x *= 1.5; // Momentum boost
-    
-    // Detach hands for the jump
-    this.limbHolds.leftHand = null;
-    this.limbHolds.rightHand = null;
-    this.log("🚀 DYNO !");
   }
 
   _getHoldPos(id) {
@@ -939,33 +1113,41 @@ export class Game {
   // Prevents impossible moves
   _checkKinematics(limb, newPos) {
     const isArm = limb.includes('Hand');
-    // Reach tolerance (arms can stretch more than legs)
-    const maxReach = isArm ? ARM_REACH * 1.3 : LEG_REACH * 1.15;
+    // Reach tolerance (arms can stretch slightly more than legs)
+    const maxReach = isArm ? ARM_REACH * 1.15 : LEG_REACH * 1.05;
     
-    // 1. Distance from opposite limb (allow reasonable stance)
+    // 1. Distance from opposite limb (prevent extreme splits)
     const opp = isArm ? (limb === 'leftHand' ? 'rightHand' : 'leftHand') : (limb === 'leftFoot' ? 'rightFoot' : 'leftFoot');
     if (this.limbHolds[opp] !== null) {
       const oppPos = this._getHoldPos(this.limbHolds[opp]);
-      // Arms can span wider (2.5x), feet less (2.0x) - more realistic
-      const maxSpan = isArm ? maxReach * 2.5 : maxReach * 2.0;
-      if (newPos.distanceTo(oppPos) > maxSpan) return false;
+      // Arms can span ~2x reach, feet more flexible (~1.8x)
+      const maxSpan = isArm ? maxReach * 2.0 : maxReach * 1.8;
+      if (newPos.distanceTo(oppPos) > maxSpan) {
+        if (Math.random() < 0.1) this.log(`⚠️ Écart trop grand entre les ${isArm ? 'mains' : 'pieds'} !`, 'warn');
+        return false;
+      }
     }
 
-    // 2. Arms can't go too far above feet (allow extension)
+    // 2. Arms can't go too far above feet
     if (isArm && this.limbHolds.leftFoot !== null && this.limbHolds.rightFoot !== null) {
       const hipY = (this._getHoldPos(this.limbHolds.leftFoot).y + this._getHoldPos(this.limbHolds.rightFoot).y) / 2 + LEG_REACH * 0.8;
-      if (newPos.y > hipY + maxReach * 2.0) return false;
+      if (newPos.y > hipY + maxReach * 2.2) {
+        if (Math.random() < 0.1) this.log("⚠️ Trop haut ! Vous ne pouvez plus vous étendre.", 'warn');
+        return false;
+      }
     }
 
-    // 3. FEET VALIDATION — more restrictive for realism
+    // 3. Feet can reach above hands for technical moves (Heel Hook)
     if (!isArm) {
       let maxHandY = -Infinity;
       if (this.limbHolds.leftHand !== null) maxHandY = Math.max(maxHandY, this._getHoldPos(this.limbHolds.leftHand).y);
       if (this.limbHolds.rightHand !== null) maxHandY = Math.max(maxHandY, this._getHoldPos(this.limbHolds.rightHand).y);
       
-      // REALISTIC: Feet can only reach ~0.8m above hands
-      // This prevents unrealistic high steps while allowing normal climbing
-      if (maxHandY !== -Infinity && newPos.y > maxHandY + 0.8) return false;
+      // Allow technical high steps up to 0.90m above hands
+      if (maxHandY !== -Infinity && newPos.y > maxHandY + 0.90) {
+        if (Math.random() < 0.1) this.log("⚠️ Pied trop haut par rapport aux mains !", 'warn');
+        return false;
+      }
       
       // Additional check: Both feet must stay relatively close together
       // This prevents the "splits" position
@@ -977,15 +1159,18 @@ export class Game {
         if (feetDistance > 1.2) return false;
       }
       
-      // Feet need support - they can't reach holds too far away
-      // Unlike hands which can stretch, feet need to push with control
-      if (this.limbHolds.leftHand !== null || this.limbHolds.rightHand !== null) {
-        const handX = this.limbHolds.leftHand !== null ? 
-          this._getHoldPos(this.limbHolds.leftHand).x : 
-          this._getHoldPos(this.limbHolds.rightHand).x;
+      // Feet need support - they can't reach holds too far horizontally from the hands
+      const handsOn = (this.limbHolds.leftHand !== null ? 1 : 0) + (this.limbHolds.rightHand !== null ? 1 : 0);
+      if (handsOn > 0) {
+        let sumX = 0;
+        let count = 0;
+        if (this.limbHolds.leftHand !== null) { sumX += this._getHoldPos(this.limbHolds.leftHand).x; count++; }
+        if (this.limbHolds.rightHand !== null) { sumX += this._getHoldPos(this.limbHolds.rightHand).x; count++; }
+        const avgHandX = sumX / count;
+        
         const footX = newPos.x;
-        // Feet shouldn't be too far horizontally from hands (realistic body positioning)
-        if (Math.abs(footX - handX) > 0.6) return false;
+        // Allow a wider horizontal window (0.85m) from the center of hands
+        if (Math.abs(footX - avgHandX) > 0.85) return false;
       }
     }
     
@@ -1011,64 +1196,87 @@ export class Game {
     const activeFeet = (this.limbHolds.leftFoot !== null ? 1 : 0) + (this.limbHolds.rightFoot !== null ? 1 : 0);
     const totalActiveLimbs = activeHands + activeFeet;
     
-    // Base stamina drain based on number of limbs used
-    if (totalActiveLimbs === 4) {
-      staminaDrain = 0.5; // Stable position, minimal drain
-    } else if (totalActiveLimbs === 3) {
-      staminaDrain = 1.5; // One limb free, moderate drain
-    } else if (totalActiveLimbs === 2) {
-      staminaDrain = 3.5; // Two limbs, high drain
-    } else if (totalActiveLimbs === 1) {
-      staminaDrain = 6.0; // One limb only, extreme drain
-    } else {
-      staminaDrain = 10.0; // No limbs, falling!
-    }
-    
-    // Extra drain if hanging by hands only (no feet)
-    if (activeHands > 0 && activeFeet === 0) {
-      staminaDrain *= 2.0; // Double drain when hanging
-    }
-    
-    // Extra drain if only one hand
-    if (activeHands === 1 && activeFeet === 0) {
-      staminaDrain *= 1.5; // 1.5x more if one hand only
-    }
-    
-    // Calculate hold difficulty
-    let holdDifficultyMultiplier = 1.0;
+    // Base stamina drain based on number of limbs used (per second %)
+    let baseDrain = 0;
+    if (totalActiveLimbs === 4) baseDrain = 1.0;
+    else if (totalActiveLimbs === 3) baseDrain = 2.0;
+    else if (totalActiveLimbs === 2) baseDrain = 4.0;
+    else if (totalActiveLimbs === 1) baseDrain = 8.0;
+    else baseDrain = 40.0;
+
+    // Calculate hold-specific penalties
+    let holdPenalty = 0;
     LIMBS.forEach(l => {
-      if (this.limbHolds[l] !== null) {
-        const hold = this.routeGen.holds.find(h => h.id === this.limbHolds[l]);
+      const holdId = this.limbHolds[l];
+      if (holdId === null) return;
+
+      if (holdId === 'SMEAR') {
+        holdPenalty += 0.5; // Smearing is tiring
+      } else {
+        const hold = this.routeGen.holds.find(h => h.id === holdId);
         if (hold) {
-          let holdFatigue = HOLD_TYPES[hold.type].fatigue;
-          
-          // Apply special hold modifiers
-          if (hold.type === 'SLIPPERY') {
-            holdFatigue *= 1.5;
-          }
-          
-          holdDifficultyMultiplier += holdFatigue * 0.1; // Each hold adds to difficulty
+          const typeData = HOLD_TYPES[hold.type] || { fatigue: 1.0 };
+          // If fatigue > 1.0, it adds to the drain
+          if (typeData.fatigue > 1.0) holdPenalty += (typeData.fatigue - 1.0) * 2.0;
+          if (hold.type === 'SLIPPERY') holdPenalty += 1.5;
         }
       }
     });
-    
-    // Check if feet are hooked high above hands (bat hang / high hook)
+
+    // Technique bonus (Heel hook) reduces the base drain
+    let technicalBonus = 1.0;
+    const torsoY = (this.climber.glbModel || this.climber.parts.torso).position.y;
+    if (this.limbPositions.leftFoot.y > torsoY || this.limbPositions.rightFoot.y > torsoY) {
+      technicalBonus = 0.7; 
+      if (Math.random() < 0.005) this.log("💪 Crochetage (Heel Hook) !", 'success');
+    }
+
+    // Final drain calculation: (Base * Bonus) + Penalties + Core Strain
     let maxHandY = -Infinity;
     if (this.limbHolds.leftHand !== null) maxHandY = Math.max(maxHandY, this._getHoldPos(this.limbHolds.leftHand).y);
     if (this.limbHolds.rightHand !== null) maxHandY = Math.max(maxHandY, this._getHoldPos(this.limbHolds.rightHand).y);
     
     let coreStrain = 0;
     if (maxHandY !== -Infinity) {
-      if (this.limbHolds.leftFoot !== null) coreStrain += Math.max(0, this._getHoldPos(this.limbHolds.leftFoot).y - maxHandY) * 2.0;
-      if (this.limbHolds.rightFoot !== null) coreStrain += Math.max(0, this._getHoldPos(this.limbHolds.rightFoot).y - maxHandY) * 2.0;
+      if (this.limbHolds.leftFoot !== null && this.limbHolds.leftFoot !== 'SMEAR') 
+        coreStrain += Math.max(0, this._getHoldPos(this.limbHolds.leftFoot).y - maxHandY) * 2.0;
+      if (this.limbHolds.rightFoot !== null && this.limbHolds.rightFoot !== 'SMEAR')
+        coreStrain += Math.max(0, this._getHoldPos(this.limbHolds.rightFoot).y - maxHandY) * 2.0;
     }
-    
-    // Final stamina calculation
-    const finalDrain = (staminaDrain * holdDifficultyMultiplier + coreStrain) * fatigueMultiplier * dt;
+
+    const finalDrain = (baseDrain * technicalBonus + holdPenalty + coreStrain) * fatigueMultiplier * dt;
     this.stamina -= finalDrain;
     
-    // Stress is just a visual indicator of stamina level
-    this.stress = Math.max(0, 100 - this.stamina);
+    // ── NEW: DISLOCATION CHECK ────────────────────────────────
+    const torsoPos = (this.climber.glbModel || this.climber.parts.torso).position;
+    let needsSync = false;
+    
+    LIMBS.forEach(l => {
+      if (this.limbHolds[l] !== null && this.limbHolds[l] !== 'SMEAR') {
+        const holdPos = this._getHoldPos(this.limbHolds[l]);
+        const side = l.includes('left') ? -1 : 1;
+        const jointOffset = l.includes('Hand') 
+          ? new THREE.Vector3(side * 0.11, 0.35, 0) // Shoulder
+          : new THREE.Vector3(side * 0.08, 0.06, 0); // Hip
+        
+        const jointWorldPos = torsoPos.clone().add(jointOffset);
+        const dist = jointWorldPos.distanceTo(holdPos);
+        const max = l.includes('Hand') ? ARM_REACH : LEG_REACH;
+        
+        if (dist > max * 1.35) {
+          this.limbHolds[l] = null;
+          this.log(`⚠️ ${LIMB_LABELS[l]} a lâché ! (Écart trop grand)`, 'warn');
+          needsSync = true;
+        }
+      }
+    });
+    
+    if (needsSync) {
+      this._syncPositionsFromHolds();
+      if (this.limbHolds.leftHand === null && this.limbHolds.rightHand === null) {
+        this.fall("Vous avez perdu vos appuis de main !");
+      }
+    }
 
     if (this.stamina <= 0) {
       this.fall("Épuisement total. Vous avez lâché prise.");
@@ -1078,46 +1286,58 @@ export class Game {
     if (this.state === 'PLAYING') {
       const physicsDt = 0.016; // Fixed timestep for physics
       
-      if (this.isJumping) {
-        // Gravity applies during jump
-        this.bodyVelocity.y -= 9.8 * physicsDt;
-        const delta = this.bodyVelocity.clone().multiplyScalar(physicsDt);
-        
-        // Move all limb positions along with the jump
-        LIMBS.forEach(l => {
-          this.limbPositions[l].add(delta);
-        });
-        
-        // Check for catch (any hand reaches a hold)
-        this.routeGen.holds.forEach(h => {
-          const hp = new THREE.Vector3(h.x, h.y, h.z);
-          LIMBS.slice(0,2).forEach(hand => {
-            if (this.limbPositions[hand].distanceTo(hp) < 0.25) {
-              this.isJumping = false;
-              this.bodyVelocity.set(0,0,0);
-              this.limbHolds[hand] = h.id;
-              this.log("Prise rattrapée ! 🚀");
-            }
-          });
-        });
+      // Swinging physics (pendulum effect if hanging)
+      const handsOn = (this.limbHolds.leftHand !== null ? 1 : 0) + (this.limbHolds.rightHand !== null ? 1 : 0);
+      const isSwingOn = this.profile.settings.swingEnabled !== false;
 
-        // Fail if falling too low (out of screen)
-        if (this.limbPositions.leftHand.y < -3) {
-          this.fall("Saut manqué ! Vous avez chuté.");
-        }
-      } else {
-        // Swinging physics (pendulum effect if hanging)
-        const handsOn = (this.limbHolds.leftHand !== null ? 1 : 0) + (this.limbHolds.rightHand !== null ? 1 : 0);
-        if (handsOn > 0 && !this.isDraggingTorso) {
-          // Pendulum-like return to center
+      if (handsOn > 0 && !this.isDraggingTorso) {
+        if (isSwingOn) {
+          // Normal pendulum physics
           const spring = 5.0;
           const damp = 0.95;
           const accel = this.bodyOffset.clone().multiplyScalar(-spring);
           this.bodyVelocity.add(accel.multiplyScalar(physicsDt));
           this.bodyVelocity.multiplyScalar(damp);
           this.bodyOffset.add(this.bodyVelocity.clone().multiplyScalar(physicsDt));
+        } else {
+          // Completely lock to center if swing is off
+          this.bodyOffset.set(0,0,0);
+          this.bodyVelocity.set(0,0,0);
         }
       }
+      
+      // Ground detection for landing animation
+      const torso = this.climber.glbModel || this.climber.parts.torso;
+      if (this.state === 'FALLEN' && torso.position.y < 0.3) {
+        this._playLandingEffect();
+      }
+    }
+  }
+
+  _playLandingEffect() {
+    if (this._hasLanded) return;
+    this._hasLanded = true;
+    
+    // Camera shake
+    const originalPos = this.camera.position.clone();
+    const shakeAmount = 0.1;
+    let shakeCount = 0;
+    const interval = setInterval(() => {
+      this.camera.position.x = originalPos.x + (Math.random() - 0.5) * shakeAmount;
+      this.camera.position.y = originalPos.y + (Math.random() - 0.5) * shakeAmount;
+      shakeCount++;
+      if (shakeCount > 10) {
+        clearInterval(interval);
+        this.camera.position.copy(originalPos);
+      }
+    }, 30);
+    
+    // Impact pose (bend knees)
+    if (this.climber.isLoaded) {
+      this.log("💥 Impact !", 'warn');
+      // Visual feedback: briefly scale or move slightly
+      this.climber.group.position.y = -0.1;
+      setTimeout(() => { if (this.state === 'FALLEN') this.climber.group.position.y = 0; }, 200);
     }
   }
 
@@ -1153,13 +1373,17 @@ export class Game {
       const text = document.getElementById('val-' + id);
       if(!el || !text) return;
       
-      // Set CSS variable for circular gauge on mobile
-      el.parentElement.style.setProperty('--gauge-value', Math.min(100, val));
-      
-      // Keep bar gauge for desktop
-      el.style.width = Math.min(100, val) + '%';
+      const width = Math.max(0, Math.min(100, val));
+      el.style.width = width + '%';
       text.textContent = intVal + '%';
-      el.style.background = val > 80 ? '#ef4444' : (val > 50 ? '#f59e0b' : '#3b82f6');
+      
+      // Color logic: Stamina (id='stamina') should be Green/Blue when high, Red when low
+      // Stress (id='stress') should be Red when high, Blue when low
+      if (id === 'stamina') {
+        el.style.background = width < 20 ? '#ef4444' : (width < 50 ? '#f59e0b' : '#3b82f6');
+      } else {
+        el.style.background = width > 80 ? '#ef4444' : (width > 50 ? '#f59e0b' : '#3b82f6');
+      }
     };
     
     // Show stamina as percentage of max (accounting for endurance bonus)
@@ -1183,7 +1407,9 @@ export class Game {
     if (!logEl) return;
     const d = document.createElement('div');
     d.textContent = msg;
-    d.style.color = type === 'warn' ? '#ef4444' : '#fff';
+    if (type === 'warn') d.style.color = '#ef4444';
+    else if (type === 'success') d.style.color = '#00ff9d';
+    else d.style.color = '#fff';
     logEl.prepend(d);
     if (logEl.children.length > 6) logEl.removeChild(logEl.lastChild);
   }
@@ -1302,15 +1528,33 @@ export class Game {
       this._updateSpecialHolds(dt);
       this._applyEnvironmentalCondition(dt);
       this._updateHUD();
+      
+      // ── TUTORIAL GHOST / HINTS ──
+      if (this.selectedRoute?.id === 'e2') {
+        // Show swing helper arrows
+        const time = Date.now() * 0.005;
+        const arrowX = Math.sin(time) * 0.4;
+        // (Visual logic for arrows could be added here or via CSS on HUD)
+        if (Math.abs(this.bodyOffset.x) < 0.1) {
+          this.log("↔️ Glissez le torse de gauche à droite !", 'info');
+        }
+      }
+
+      if (this.selectedRoute?.id === 'e1' && !this.isJumping) {
+        if (this.bodyVelocity.y > 1.5) {
+          this.log("🚀 MAINTENANT ! Appuyez sur ESPACE", 'success');
+        }
+      }
 
       // Smooth camera follow
       let targetY = 1.5;
       if (this.climber.glbModel) {
-        targetY = this.climber.glbModel.position.y + 0.4;
+        targetY = this.climber.glbModel.position.y;
       } else if (this.climber.parts && this.climber.parts.torso) {
-        targetY = this.climber.parts.torso.position.y + 0.4;
+        targetY = this.climber.parts.torso.position.y;
       }
       this.camera.position.y += (targetY - this.camera.position.y) * 4 * dt;
+      this.camera.position.z = 3.8; // Move back to see the whole body
       
       // Keep sun relative to camera to preserve shadow quality
       this.sun.position.y = this.camera.position.y + 10;

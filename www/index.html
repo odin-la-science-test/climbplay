@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#05070a">
+  <title>Chalk It — Simulateur d'Escalade 3D</title>
+  <meta name="description" content="Chalk It : simulateur d'escalade 3D avec prises, volumes, fatigue et cotations officielles françaises.">
+  <!-- Open Graph / Search Engine Optimization -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Chalk It — Simulateur d'Escalade 3D">
+  <meta property="og:description" content="Simulateur d'escalade 3D avec prises, volumes, fatigue et cotations officielles.">
+  <meta property="og:image" content="logo.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="logo.png">
+
+  <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <!-- SVG Filters for high-tech effects -->
+  <svg style="display: none;">
+    <defs>
+      <filter id="chromatic-aberration">
+        <feColorMatrix type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="red"/>
+        <feOffset in="red" dx="2" dy="0" result="red-offset"/>
+        <feColorMatrix type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="green"/>
+        <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="blue"/>
+        <feOffset in="blue" dx="-2" dy="0" result="blue-offset"/>
+        <feBlend in="red-offset" in2="green" mode="screen" result="temp"/>
+        <feBlend in="temp" in2="blue-offset" mode="screen"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- LOADING SCREEN -->
+  <div id="loading-screen">
+    <div class="loader-content">
+      <div class="loader-icon">
+        <img src="logo.png" alt="Chalk It Logo" class="logo-img-anim">
+      </div>
+      <h1>Chalk <span>It</span></h1>
+      <p>Chargement du mur…</p>
+      <div class="loader-bar"><div class="loader-fill"></div></div>
+      <button id="btn-start" style="display:none;">Commencer l'ascension →</button>
+    </div>
+  </div>
+
+  <!-- ══════════ FULLSCREEN BACKGROUNDS ══════════ -->
+  <div id="bg-home" class="fullscreen-bg">
+    <div class="bg-orb orb1"></div>
+    <div class="bg-orb orb2"></div>
+    <div class="bg-orb orb3"></div>
+  </div>
+  
+  <div id="bg-profile" class="fullscreen-bg" style="display:none;">
+    <div class="bg-orb orb-prof1"></div>
+    <div class="bg-orb orb-prof2"></div>
+  </div>
+
+  <!-- ══════════ VIEW: HOME (PLAY) ══════════ -->
+  <div id="view-home" class="scroll-view" style="display:none;">
+    <div class="menu-wrapper">
+      <!-- Header -->
+      <header class="menu-header">
+        <div class="logo">
+          <img src="logo.png" alt="Chalk It" class="logo-img">
+          <div>
+            <h1 class="logo-title">Chalk <span class="amp">It</span></h1>
+            <p class="logo-sub">Simulateur d'Escalade</p>
+          </div>
+        </div>
+        <div class="controls-hint">
+          <span><b>Glisser Torse</b>: Balancement</span>
+        </div>
+        <nav class="main-nav">
+          <button class="nav-btn active" data-target="view-home">🏔 Grimper</button>
+          <button class="nav-btn" data-target="view-profile">👤 Profil</button>
+        </nav>
+      </header>
+
+      <div class="panel-main-layout">
+        <!-- Row 1: Mode, Routes, Records -->
+        <div class="card" id="card-mode">
+          <h2 class="card-title">Mode de Jeu</h2>
+          <div class="mode-tabs">
+            <button class="mode-btn active" data-mode="BLOC" id="mode-bloc">
+              <span class="mode-icon">🪨</span>
+              <span class="mode-label">Bloc</span>
+              <span class="mode-desc">Courts et intenses</span>
+            </button>
+            <button class="mode-btn" data-mode="VOIE" id="mode-voie">
+              <span class="mode-icon">🏔</span>
+              <span class="mode-label">Voie</span>
+              <span class="mode-desc">15m, fin de voie</span>
+            </button>
+            <button class="mode-btn" data-mode="INFINI" id="mode-infini">
+              <span class="mode-icon">∞</span>
+              <span class="mode-label">Infini</span>
+              <span class="mode-desc">Checkpoints sans limite</span>
+            </button>
+            <button class="mode-btn" data-mode="ENTRAINEMENT" id="mode-entrainement">
+              <span class="mode-icon">🎯</span>
+              <span class="mode-label">Entraînement</span>
+              <span class="mode-desc">Maîtrise technique</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="card" id="card-routes">
+          <h2 class="card-title">Choisir une Voie <span id="route-mode-label" class="badge-mode">BLOC</span></h2>
+          <div id="route-list" class="route-list-single"></div>
+        </div>
+
+        <div class="card card-records" id="card-records">
+          <h2 class="card-title">🏅 Vos Records</h2>
+          <div class="record-row">
+            <span class="record-label">Voie max</span>
+            <span id="local-record-voie" class="record-val">0.0m</span>
+          </div>
+          <div class="record-row">
+            <span class="record-label">Bloc TOP</span>
+            <span id="local-record-bloc" class="record-val">—</span>
+          </div>
+          <div class="record-row">
+            <span class="record-label">XP Total</span>
+            <span id="profile-xp" class="record-val xp-val">0 XP</span>
+          </div>
+        </div>
+
+        <!-- Row 2: Launch (Full Width) -->
+        <div class="card card-launch" id="card-launch">
+          <div id="selected-route-info">
+            <div class="route-preview">
+              <div class="route-grade-big" id="preview-grade">4</div>
+              <div>
+                <div class="route-name-big" id="preview-name">Sélectionnez une voie</div>
+                <div class="route-desc-txt" id="preview-desc">—</div>
+              </div>
+            </div>
+            <div class="difficulty-bar-wrap">
+              <div class="difficulty-bar-track">
+                <div class="difficulty-bar-fill" id="diff-bar-fill"></div>
+              </div>
+              <span id="diff-label">—</span>
+            </div>
+          </div>
+          <button id="btn-start-game" class="btn-launch" disabled>
+            <span>LANCER L'ASCENSION</span>
+            <span class="btn-arrow">→</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ VIEW: PROFILE ══════════ -->
+  <div id="view-profile" class="scroll-view" style="display:none;">
+    <div class="menu-wrapper">
+      <!-- Header -->
+      <header class="menu-header">
+        <div class="logo">
+          <img src="logo.png" alt="Chalk It" class="logo-img">
+          <div>
+            <h1 class="logo-title">Chalk <span class="amp">It</span></h1>
+            <p class="logo-sub">Mon Espace Personnel</p>
+          </div>
+        </div>
+        <nav class="main-nav">
+          <button class="nav-btn" data-target="view-home">🏔 Grimper</button>
+          <button class="nav-btn active" data-target="view-profile">👤 Profil</button>
+        </nav>
+      </header>
+
+      <div class="profile-layout">
+        <div class="profile-card card">
+          <div class="avatar-ring">
+            <div class="avatar" id="profile-avatar">?</div>
+          </div>
+          <div class="profile-name" id="profile-display-name">Grimpeur Anonyme</div>
+          <div class="profile-sub">Compte local (localStorage)</div>
+
+          <div class="profile-edit-form">
+            <label>Nom affiché</label>
+            <input type="text" id="input-name" placeholder="Votre pseudo" class="profile-input">
+            <button class="btn-save" id="btn-save-profile">Sauvegarder</button>
+          </div>
+          
+          <h3 class="card-subtitle" style="margin-top:var(--sp-xl);">🎨 Thème de l'interface</h3>
+          <div class="theme-selector">
+            <button class="theme-btn active" data-theme="dark">
+              <span class="theme-icon">🌙</span>
+              <span class="theme-label">Sombre</span>
+            </button>
+            <button class="theme-btn" data-theme="light">
+              <span class="theme-icon">☀️</span>
+              <span class="theme-label">Clair</span>
+            </button>
+          </div>
+          
+          <h3 class="card-subtitle" style="margin-top:var(--sp-xl);">Personnalisation du Grimpeur</h3>
+          <div id="skin-selector" class="skin-grid"></div>
+        </div>
+
+        <div class="profile-stats-card card">
+          <h2 class="card-title">📊 Statistiques & Progression</h2>
+          <div class="stat-grid">
+            <div class="stat-block">
+              <div class="stat-val" id="stat-xp">0</div>
+              <div class="stat-lbl">XP Total</div>
+            </div>
+            <div class="stat-block">
+              <div class="stat-val" id="stat-voie">0m</div>
+              <div class="stat-lbl">Record Voie</div>
+            </div>
+            <div class="stat-block">
+              <div class="stat-val" id="stat-bloc">—</div>
+              <div class="stat-lbl">Bloc TOP</div>
+            </div>
+            <div class="stat-block">
+              <div class="stat-val" id="stat-checkpoints">0</div>
+              <div class="stat-lbl">Checkpoints</div>
+            </div>
+          </div>
+
+          <h3 class="card-subtitle" style="margin-top:24px;">🏆 Niveau Actuel</h3>
+          <div class="xp-bar-wrap">
+            <div class="xp-bar-track"><div class="xp-bar-fill" id="xp-bar-fill"></div></div>
+            <span id="xp-bar-label">Niv. 1</span>
+          </div>
+
+          <h3 class="card-subtitle" style="margin-top:24px;">📅 Dernières Ascensions</h3>
+          <div id="history-list" class="history-list">
+            <p class="empty-state">Aucune ascension enregistrée.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ MAP LOADING SCREEN ══════════ -->
+  <div id="map-loading-screen" style="display:none;">
+    <div class="map-loader-content">
+      <h2 class="map-loading-title">Génération de la voie...</h2>
+      <div class="map-loader-bar"><div class="map-loader-fill"></div></div>
+      <p class="map-loading-desc" id="map-loading-desc">Analyse du mur et pose des prises</p>
+    </div>
+  </div>
+
+  <!-- ══════════ HUD ══════════ -->
+  <div id="hud" style="display:none;">
+    <div id="tutorial-overlay" class="tutorial-overlay hidden">
+      <div class="tutorial-card">
+        <div class="tutorial-icon" id="tut-icon">🎯</div>
+        <div class="tutorial-text">
+          <h3 id="tut-title">Tutoriel</h3>
+          <p id="tut-msg">Explication du mouvement...</p>
+        </div>
+        <div class="tutorial-hint">Cliquez pour continuer</div>
+      </div>
+    </div>
+    <!-- Top Bar -->
+    <div id="hud-top">
+      <div class="route-info">
+        <span class="route-name">🧗 <span id="hud-route-name">Chalk It</span></span>
+        <span class="route-grade" id="hud-grade">6c</span>
+        <span class="route-height" id="current-height">0.0m</span>
+        <span class="checkpoint-badge" id="checkpoint-badge" style="display:none;">💾 CHECKPOINT</span>
+      </div>
+    </div>
+
+    <!-- Left Panel -->
+    <div id="hud-left">
+      <div class="panel glass">
+        <h3>💪 État Physique</h3>
+        <div class="stat-row">
+          <label>Endurance</label>
+          <div class="gauge gauge-stam"><div class="gauge-fill stamina" id="gauge-stamina"></div></div>
+          <span class="gauge-val" id="val-stamina">100%</span>
+        </div>
+        <div class="stat-row">
+          <label>Stress</label>
+          <div class="gauge gauge-stress"><div class="gauge-fill stress" id="gauge-stress"></div></div>
+          <span class="gauge-val" id="val-stress">0%</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Mobile Bottom Bar -->
+    <div id="hud-mobile-bottom">
+      <div class="mobile-stat-bar">
+        <div class="mobile-stat-item">
+          <span class="mobile-stat-icon">💪</span>
+          <div class="mobile-stat-gauge">
+            <div class="mobile-gauge-fill stamina" id="mobile-gauge-stamina"></div>
+          </div>
+          <span class="mobile-stat-val" id="mobile-val-stamina">100%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center feedback -->
+    <div id="action-feedback"></div>
+
+    <!-- Instructions -->
+    <div id="instructions" class="panel glass">
+      <p class="desktop-only"><strong>Glisser-déposer</strong> un membre · <kbd>R</kbd> Repos · <kbd>Espace</kbd> Secouer · <kbd>Échap</kbd> Menu</p>
+      <p class="mobile-only"><strong>Glisser-déposer</strong> un membre pour grimper</p>
+    </div>
+    
+    <!-- Mobile Controls -->
+    <div id="mobile-controls">
+      <button id="btn-rest" class="mobile-btn">
+        <span class="btn-icon">💤</span>
+        <span class="btn-label">Repos</span>
+        <span class="btn-count" id="rest-count">3</span>
+      </button>
+      <button id="btn-shake" class="mobile-btn">
+        <span class="btn-icon">🤝</span>
+        <span class="btn-label">Secouer</span>
+      </button>
+      <button id="btn-menu" class="mobile-btn">
+        <span class="btn-icon">☰</span>
+        <span class="btn-label">Menu</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════ POST-RUN OVERLAY ══════════ -->
+  <div id="basecamp-overlay" style="display:none;">
+    <div class="basecamp-content glass">
+      <h1 id="fall-title">⛺ Camp de Base</h1>
+      <p id="fall-reason" class="fall-reason-txt"></p>
+
+      <div class="result-grid" id="run-report">
+        <div class="result-block">
+          <div class="result-val" id="report-height">0m</div>
+          <div class="result-lbl">Hauteur</div>
+        </div>
+        <div class="result-block">
+          <div class="result-val green" id="report-xp">+0 XP</div>
+          <div class="result-lbl">XP gagnée</div>
+        </div>
+        <div class="result-block">
+          <div class="result-val" id="report-checkpoints">0</div>
+          <div class="result-lbl">Checkpoints</div>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <h3>📈 XP Total : <span id="profile-xp-end" class="xp-green">0</span></h3>
+        <div id="stats-list" class="stats-list"></div>
+      </div>
+
+      <div class="btn-row">
+        <button id="btn-next-climb" class="btn-launch">Repartir grimper</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="game.js"></script>
+  <script>
+    // Premium Mouse Tracking for Cards
+    document.addEventListener('mousemove', e => {
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        const rect = card.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        card.style.setProperty('--mouse-x', `${x}%`);
+        card.style.setProperty('--mouse-y', `${y}%`);
+      });
+    });
+    
+    // Theme Management - Standalone
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('[THEME] DOM loaded, initializing theme...');
+      
+      // Load saved theme
+      const savedTheme = localStorage.getItem('chalk_it_theme') || 'dark';
+      console.log('[THEME] Saved theme:', savedTheme);
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      
+      // Wait for buttons to be available
+      setTimeout(() => {
+        const themeButtons = document.querySelectorAll('.theme-btn');
+        console.log('[THEME] Found theme buttons:', themeButtons.length);
+        
+        themeButtons.forEach(btn => {
+          console.log('[THEME] Button theme:', btn.dataset.theme);
+          
+          // Set initial active state
+          if (btn.dataset.theme === savedTheme) {
+            btn.classList.add('active');
+          }
+          
+          // Add click handler
+          btn.addEventListener('click', () => {
+            const theme = btn.dataset.theme;
+            console.log('[THEME] Button clicked, switching to:', theme);
+            
+            // Apply theme
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('chalk_it_theme', theme);
+            
+            // Update button states
+            themeButtons.forEach(b => {
+              if (b.dataset.theme === theme) {
+                b.classList.add('active');
+              } else {
+                b.classList.remove('active');
+              }
+            });
+            
+            console.log('[THEME] Theme applied:', document.documentElement.getAttribute('data-theme'));
+          });
+        });
+      }, 1000);
+    });
+  </script>
+</body>
+</html>

@@ -16,8 +16,8 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="logo.png">
 
-  <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
   <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
+  <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" sizes="180x180" href="logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -49,8 +49,27 @@
     </defs>
   </svg>
 
+  <!-- AUTH / PROFILE SELECTION OVERLAY -->
+  <div id="auth-overlay" class="fullscreen-bg" style="display: flex; z-index: 10000; align-items: center; justify-content: center; background: rgba(5, 7, 10, 0.95); backdrop-filter: blur(10px); pointer-events: auto;">
+    <div class="auth-card" style="background: rgba(15, 23, 42, 0.8); padding: 2.5rem; border-radius: 1.5rem; width: 90%; max-width: 400px; border: 1px solid rgba(255,255,255,0.1); text-align: center; color: white;">
+      <img src="logo.png" alt="Logo" style="width: 80px; margin-bottom: 1.5rem;">
+      <h2 style="margin-bottom: 0.5rem; font-weight: 800; font-size: 1.75rem;">Bienvenue sur ClimbPlay</h2>
+      <p style="color: rgba(255,255,255,0.6); margin-bottom: 2rem;">Sélectionnez ou créez un profil</p>
+      
+      <div id="profile-list" style="margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
+        <!-- Profiles injected here -->
+      </div>
+      
+      <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; margin-top: 1rem;">
+        <input type="text" id="new-profile-name" placeholder="Nom du nouveau grimpeur" 
+               style="width: 100%; padding: 0.75rem 1rem; border-radius: 0.75rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; margin-bottom: 1rem;">
+        <button id="create-profile-btn" style="width: 100%; padding: 0.8rem; background: #3b82f6; color: white; border: none; border-radius: 0.8rem; font-weight: bold; cursor: pointer;">Nouveau Profil</button>
+      </div>
+    </div>
+  </div>
+
   <!-- LOADING SCREEN -->
-  <div id="loading-screen">
+  <div id="loading-screen" class="fullscreen-bg">
     <div class="loader-content">
       <div class="loader-icon">
         <img src="logo.png" alt="Chalk It Logo" class="logo-img-anim">
@@ -87,7 +106,6 @@
           </div>
         </div>
         <div class="controls-hint">
-          <span><b>Espace</b>: Saut (Dyno)</span>
           <span><b>Glisser Torse</b>: Balancement</span>
         </div>
         <nav class="main-nav">
@@ -106,6 +124,7 @@
               <span class="mode-label">Bloc</span>
               <span class="mode-desc">Courts et intenses</span>
             </button>
+            </button>
             <button class="mode-btn" data-mode="VOIE" id="mode-voie">
               <span class="mode-icon">🏔</span>
               <span class="mode-label">Voie</span>
@@ -115,6 +134,11 @@
               <span class="mode-icon">∞</span>
               <span class="mode-label">Infini</span>
               <span class="mode-desc">Checkpoints sans limite</span>
+            </button>
+            <button class="mode-btn" data-mode="ENTRAINEMENT" id="mode-entrainement">
+              <span class="mode-icon">🎯</span>
+              <span class="mode-label">Entraînement</span>
+              <span class="mode-desc">Maîtrise technique</span>
             </button>
           </div>
         </div>
@@ -196,6 +220,7 @@
             <label>Nom affiché</label>
             <input type="text" id="input-name" placeholder="Votre pseudo" class="profile-input">
             <button class="btn-save" id="btn-save-profile">Sauvegarder</button>
+            <button id="logout-btn" class="btn-save" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); margin-top: 10px;">Changer de profil</button>
           </div>
           
           <h3 class="card-subtitle" style="margin-top:var(--sp-xl);">🎨 Thème de l'interface</h3>
@@ -209,6 +234,27 @@
               <span class="theme-label">Clair</span>
             </button>
           </div>
+          
+          <h3 class="card-subtitle" style="margin-top:var(--sp-xl);">⚙️ Paramètres de Jeu</h3>
+          <div class="setting-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:1rem; border-radius:1rem; border:1px solid var(--border); margin-bottom:1rem;">
+            <div>
+              <div style="font-weight:600;">Physique du Balancier</div>
+              <div style="font-size:0.8rem; color:var(--text-secondary);">Activer le balancement naturel</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggle-swing" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+          <style>
+            .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+            .switch input { opacity: 0; width: 0; height: 0; }
+            .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #334155; transition: .4s; border-radius: 34px; }
+            .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+            input:checked + .slider { background-color: #3b82f6; }
+            input:focus + .slider { box-shadow: 0 0 1px #3b82f6; }
+            input:checked + .slider:before { transform: translateX(24px); }
+          </style>
           
           <h3 class="card-subtitle" style="margin-top:var(--sp-xl);">Personnalisation du Grimpeur</h3>
           <div id="skin-selector" class="skin-grid"></div>
@@ -261,6 +307,16 @@
 
   <!-- ══════════ HUD ══════════ -->
   <div id="hud" style="display:none;">
+    <div id="tutorial-overlay" class="tutorial-overlay hidden">
+      <div class="tutorial-card">
+        <div class="tutorial-icon" id="tut-icon">🎯</div>
+        <div class="tutorial-text">
+          <h3 id="tut-title">Tutoriel</h3>
+          <p id="tut-msg">Explication du mouvement...</p>
+        </div>
+        <div class="tutorial-hint">Cliquez pour continuer</div>
+      </div>
+    </div>
     <!-- Top Bar -->
     <div id="hud-top">
       <div class="route-info">

@@ -49,44 +49,44 @@ export const GRADES = {
 // ── Curated named routes ─────────────────────────────────────
 export const CURATED_ROUTES = [
   // BLOC PRÉDÉFINI
-  { mode:'BLOC', id:'bloc-1', name:"La Dalle Douce",        difficulty:1, grade:'4',  desc:"Première ascension, prises généreuses.", predefined: true },
-  { mode:'BLOC', id:'bloc-2', name:"Le Dièdre du Débutant", difficulty:2, grade:'5c', desc:"Quelques réglettes, début de la technique.", predefined: true },
-  { mode:'BLOC', id:'bloc-3', name:"La Fissure Traîtresse",  difficulty:3, grade:'6a', desc:"Les premières pincettes apparaissent.", predefined: true },
-  { mode:'BLOC', id:'b4', name:"Le Toit du Diable",      difficulty:4, grade:'6c', desc:"Un dévers prononcé, physique exigeant.", predefined: true },
-  { mode:'BLOC', id:'b5', name:"L'Araignée Noire",       difficulty:5, grade:'7a', desc:"Mouvements dynamiques, prises microscopiques.", predefined: true },
-  { mode:'BLOC', id:'b6', name:"Le Cobra",               difficulty:6, grade:'7c', desc:"Coordination parfaite requise.", predefined: true },
-  { mode:'BLOC', id:'b7', name:"Silence (8c)",           difficulty:8, grade:'8c', desc:"Le Graal. Bon courage.", predefined: true },
+  // BLOC PRÉDÉFINI (Permanents)
+  { mode:'BLOC', id:'bloc-1', name:"La Dalle Douce",        difficulty:1, grade:'4',  desc:"Première ascension, prises généreuses.", predefined: true, permanent: true },
+  { mode:'BLOC', id:'bloc-2', name:"Le Dièdre du Débutant", difficulty:2, grade:'5c', desc:"Quelques réglettes, début de la technique.", predefined: true, permanent: true },
+  { mode:'BLOC', id:'bloc-3', name:"La Fissure Traîtresse",  difficulty:3, grade:'6a', desc:"Les premières pincettes apparaissent.", predefined: true, permanent: true },
   
-  // NOUVELLES MÉCANIQUES
-  { mode:'BLOC', id:'jump-1',  name:"Le Grand Saut",        difficulty:4, grade:'6c', desc:"Testez la propulsion !", predefined: true },
-  { mode:'BLOC', id:'swing-1', name:"Le Pendule",          difficulty:3, grade:'6a', desc:"Testez le balancement !", predefined: true },
-  { mode:'BLOC', id:'dyno-1',  name:"Le Vol Plané",        difficulty:5, grade:'7a', desc:"Saut massif (Dyno).",    predefined: true },
-  { mode:'BLOC', id:'swing-2', name:"L'Horloge",           difficulty:4, grade:'6b', desc:"Coordination de balancement.", predefined: true },
-  { mode:'BLOC', id:'no-feet-1', name:"La Traction Pure",  difficulty:6, grade:'7b', desc:"Bras uniquement (No-Feet).",  predefined: true },
+  // BLOC PRÉDÉFINI (Rotation)
+  { mode:'BLOC', id:'b-rot-1', name:"L'Arête Tranchante",  difficulty:4, grade:'6b', desc:"Module de la semaine : Équilibre pur.", predefined: true, rotation: 1 },
+  { mode:'BLOC', id:'b-rot-2', name:"Le Toit du Diable",   difficulty:5, grade:'7a', desc:"Module de la semaine : Gros dévers physique.", predefined: true, rotation: 2 },
+  { mode:'BLOC', id:'b-rot-3', name:"La Grotte Bleue",     difficulty:6, grade:'7c', desc:"Module de la semaine : Lecture complexe.", predefined: true, rotation: 3 },
+  { mode:'BLOC', id:'b-rot-4', name:"Le Pas de Danse",     difficulty:3, grade:'6a', desc:"Module de la semaine : Coordination.", predefined: true, rotation: 4 },
+
+  { mode:'BLOC', id:'b5', name:"L'Araignée Noire",       difficulty:5, grade:'7a', desc:"Mouvements dynamiques.", predefined: true, permanent: true },
+  { mode:'BLOC', id:'b7', name:"Silence (8c)",           difficulty:8, grade:'8c', desc:"Le Graal. Bon courage.", predefined: true, permanent: true },
   
-  // BLOC ALÉATOIRE
-  { mode:'BLOC', id:'br1', name:"🎲 Bloc Aléatoire Facile",    difficulty:1, grade:'4',  desc:"Nouveau bloc à chaque fois.", predefined: false },
-  { mode:'BLOC', id:'br2', name:"🎲 Bloc Aléatoire Moyen",     difficulty:3, grade:'6a', desc:"Nouveau bloc à chaque fois.", predefined: false },
-  { mode:'BLOC', id:'br3', name:"🎲 Bloc Aléatoire Difficile", difficulty:5, grade:'7a', desc:"Nouveau bloc à chaque fois.", predefined: false },
-  { mode:'BLOC', id:'br4', name:"🎲 Bloc Aléatoire Extrême",   difficulty:7, grade:'8a', desc:"Nouveau bloc à chaque fois.", predefined: false },
+  // VOIE PRÉDÉFINIE (Permanents)
+  { mode:'VOIE', id:'voie-1', name:"Initiation Falaise",     difficulty:1, grade:'4',  desc:"Voie tracée pour les premières fois.", predefined: true, permanent: true },
+  { mode:'VOIE', id:'voie-2', name:"La Couenne Calcaire",    difficulty:2, grade:'5c', desc:"Calcaire typique, bonne adhérence.", predefined: true, permanent: true },
   
-  // VOIE PRÉDÉFINIE
-  { mode:'VOIE', id:'voie-1', name:"Initiation Falaise",     difficulty:1, grade:'4',  desc:"Voie tracée pour les premières fois.", predefined: true },
-  { mode:'VOIE', id:'voie-2', name:"La Couenne Calcaire",    difficulty:2, grade:'5c', desc:"Calcaire typique, bonne adhérence.", predefined: true },
-  { mode:'VOIE', id:'v3', name:"Dévers Méditerranéen",   difficulty:3, grade:'6a', desc:"Style sportif, bien équipée.", predefined: true },
-  { mode:'VOIE', id:'v4', name:"La Grande Voie",         difficulty:4, grade:'6c', desc:"15 mètres de plaisir intense.", predefined: true },
-  { mode:'VOIE', id:'v5', name:"Rêve de Singe",          difficulty:6, grade:'7a', desc:"Sequence de doigts sur faible relief.", predefined: true },
-  { mode:'VOIE', id:'v6', name:"Biographie",             difficulty:9, grade:'9a', desc:"La voie la plus dure du monde. Pour les légendes.", predefined: true },
+  // VOIE PRÉDÉFINIE (Rotation)
+  { mode:'VOIE', id:'v-rot-1', name:"L'Envolée Lyrique",     difficulty:4, grade:'6c', desc:"Module hebdo : Endurance de force.", predefined: true, rotation: 1 },
+  { mode:'VOIE', id:'v-rot-2', name:"Vertical Limit",        difficulty:6, grade:'7b', desc:"Module hebdo : Petites prises uniquement.", predefined: true, rotation: 2 },
+  { mode:'VOIE', id:'v-rot-3', name:"La Cascade Gelée",      difficulty:5, grade:'7a', desc:"Module hebdo : Adhérence précaire.", predefined: true, rotation: 3 },
+
+  { mode:'VOIE', id:'v6', name:"Biographie",             difficulty:9, grade:'9a', desc:"La voie légendaire.", predefined: true, permanent: true },
   
-  // VOIE ALÉATOIRE
-  { mode:'VOIE', id:'vr1', name:"🎲 Voie Aléatoire Facile",    difficulty:1, grade:'4',  desc:"Nouvelle voie à chaque fois.", predefined: false },
-  { mode:'VOIE', id:'vr2', name:"🎲 Voie Aléatoire Moyenne",   difficulty:3, grade:'6a', desc:"Nouvelle voie à chaque fois.", predefined: false },
-  { mode:'VOIE', id:'vr3', name:"🎲 Voie Aléatoire Difficile", difficulty:5, grade:'7a', desc:"Nouvelle voie à chaque fois.", predefined: false },
-  { mode:'VOIE', id:'vr4', name:"🎲 Voie Aléatoire Extrême",   difficulty:7, grade:'8a', desc:"Nouvelle voie à chaque fois.", predefined: false },
+  // ENTRAINEMENT
+  { mode:'ENTRAINEMENT', id:'e2', name:"Balancement de Base", difficulty:2, grade:'5c', desc:"Apprenez à bouger le torse.", predefined: true },
+  { mode:'ENTRAINEMENT', id:'e6', name:"Campus Master",       difficulty:7, grade:'8a', desc:"Force pure des bras, sans pieds.", predefined: true },
+  
+  // ALÉATOIRES
+  { mode:'BLOC', id:'br1', name:"🎲 Bloc Aléatoire Facile",    difficulty:1, grade:'4',  desc:"Nouveau à chaque fois.", predefined: false },
+  { mode:'BLOC', id:'br2', name:"🎲 Bloc Aléatoire Moyen",     difficulty:3, grade:'6a', desc:"Nouveau à chaque fois.", predefined: false },
+  { mode:'VOIE', id:'vr1', name:"🎲 Voie Aléatoire Facile",    difficulty:1, grade:'4',  desc:"Nouvelle à chaque fois.", predefined: false },
+  { mode:'VOIE', id:'vr2', name:"🎲 Voie Aléatoire Moyenne",   difficulty:3, grade:'6a', desc:"Nouvelle à chaque fois.", predefined: false },
   
   // INFINI
-  { mode:'INFINI', id:'i1', name:"Mur Sans Fin",         difficulty:2, grade:'5c+', desc:"Grimpe sans limite. Des checkpoints tous les 20m.", predefined: false },
-  { mode:'INFINI', id:'i2', name:"L'Infini Expert",      difficulty:5, grade:'7a',  desc:"Le mur sans fin en mode extrême.", predefined: false },
+  { mode:'INFINI', id:'i1', name:"Mur Sans Fin",         difficulty:2, grade:'5c+', desc:"Grimpe sans limite.", predefined: false },
+  { mode:'INFINI', id:'i2', name:"L'Infini Expert",      difficulty:5, grade:'7a',  desc:"Le mur sans fin extrême.", predefined: false },
 ];
 
 // ── Limbs ────────────────────────────────────────────────────
@@ -101,10 +101,10 @@ export const LIMB_LABELS = {
 // ============================================================
 // CHARACTER DIMENSIONS (Elite Athlete Proportions)
 // ============================================================
-export const ARM_UPPER = 0.22;
-export const ARM_LOWER = 0.20;
-export const LEG_UPPER = 0.32;
-export const LEG_LOWER = 0.30;
+export const ARM_UPPER = 0.28;
+export const ARM_LOWER = 0.26;
+export const LEG_UPPER = 0.36;
+export const LEG_LOWER = 0.34;
 
 export const ARM_REACH = ARM_UPPER + ARM_LOWER;
 export const LEG_REACH = LEG_UPPER + LEG_LOWER;
@@ -241,12 +241,13 @@ export class RouteGenerator {
     for (let i = 0; i < count; i++) {
       const y = yFrom + i * stepY + (this.rng() - 0.5) * stepY * 0.5;
       
-      // ZIGZAG HORIZONTAL: Make route go left-right more aggressively on higher difficulties
-      const zigzagIntensity = Math.min(1.5, difficulty * 0.15); // 0 to 1.5
-      pathX += (this.rng() - 0.5) * (mode === 'BLOC' ? 1.2 : 0.6) * zigzagIntensity;
-      pathX = Math.max(-2.5, Math.min(2.5, pathX)); // Wider range for zigzag
+      // ZIGZAG HORIZONTAL: Linear for easy levels, aggressive for hard ones
+      let zigzagIntensity = difficulty <= 2 ? 0.3 : Math.min(2.0, difficulty * 0.25);
+      const drift = (this.rng() - 0.5) * (mode === 'BLOC' ? 1.8 : 1.2) * zigzagIntensity;
+      pathX += drift;
+      pathX = Math.max(-3.5, Math.min(3.5, pathX));
       
-      const x = pathX + (this.rng() - 0.5) * 0.8;
+      const x = pathX + (this.rng() - 0.5) * 1.2;
       
       let type = pool[Math.floor(this.rng() * pool.length)];
 
